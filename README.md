@@ -10,13 +10,6 @@ This repo is a real, separated full-stack app:
 himalayan-learning-grid/
 ├── backend/    Node + Express + SQLite — the "Local Hub" API
 └── frontend/   React + Vite PWA — the student & teacher app
-```
-
-It implements the three-owner architecture from the team plan:
-- **Bhavay** — frontend / PWA / dashboards → `frontend/`
-- **Nipun** — backend / database / AI tutor / APIs → `backend/`
-- **Shagun** — satellite adapter / smart sync / priority engine → `backend/src/services/{satelliteAdapter,priorityEngine,syncEngine}.js`
-
 ---
 
 ## 1. Quick start
