@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { RefreshCw, AlertTriangle } from "lucide-react";
 import { api } from "../services/apiClient.js";
-import { Button, Badge, StatRow, PriorityBadge, SyncStatusBadge, ProgressBar } from "../components/ui.jsx";
+import { getQueuedEvents, setLastSync } from "../services/offlineStore.js";
+import { Button, StatRow, PriorityBadge, SyncStatusBadge, PageHeader, SyncTimeline } from "../components/ui.jsx";
+import { CONN_STATES } from "../constants.js";
 
-export default function Sync({ student, networkOn, connState, setConnState }) {
+function pipelineFrom(connState, syncing, queuedLocal, pendingUploads) {
+  if (connState === CONN_STATES.OFFLINE) return queuedLocal || pendingUploads ? "QUEUED" : "OFFLINE";
+  if (connState === CONN_STATES.SYNCING || syncing) return "UPLOADING";
+  if (connState === CONN_STATES.SYNC_ERROR) return "SATELLITE WINDOW";
+  if (connState === CONN_STATES.SYNCED) return "SYNCED";
+  if (connState === CONN_STATES.LOCAL_HUB) return pendingUploads ? "QUEUED" : "OFFLINE";
+  return "OFFLINE";
+}
+
+export default function Sync({ student, networkOn, connState, setConnState, setNetworkOn, setHubOn }) {
   const [ranked, setRanked] = useState([]);
   const [queue, setQueue] = useState({ uploads: [], downloads: [] });
   const [gatewayLog, setGatewayLog] = useState([]);
@@ -11,6 +22,8 @@ export default function Sync({ student, networkOn, connState, setConnState }) {
   const [conflicts, setConflicts] = useState([]);
   const [forceSyncError, setForceSyncError] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [localQueued, setLocalQueued] = useState([]);
+  const [phase, setPhase] = useState("OFFLINE");
 
   async function refreshAll() {
     try { setRanked(await api.getSyncCatalog(student.id)); } catch {}
@@ -18,26 +31,46 @@ export default function Sync({ student, networkOn, connState, setConnState }) {
     try { setGatewayLog(await api.getGatewayLog()); } catch {}
     try { setHistory(await api.getSyncHistory()); } catch {}
     try { setConflicts(await api.getConflicts()); } catch {}
+    setLocalQueued(await getQueuedEvents());
   }
   useEffect(() => { refreshAll(); }, [student.id]);
+  useEffect(() => {
+    const pendingUploads = queue.uploads.filter((u) => u.sync_status !== "synced").length;
+    setPhase(pipelineFrom(connState, syncing, localQueued.length, pendingUploads));
+  }, [connState, syncing, localQueued, queue]);
 
   async function runSync() {
     setSyncing(true);
-    setConnState("SYNCING");
+    setConnState(CONN_STATES.SYNCING);
+    setPhase("SATELLITE WINDOW");
     try {
+      setPhase("UPLOADING");
       const res = await api.runSync({ studentId: student.id, simulateFailure: forceSyncError });
-      setConnState(res.status === "SYNC_ERROR" ? "SYNC_ERROR" : "ONLINE");
+      if (res.status === "SYNC_ERROR") {
+        setConnState(CONN_STATES.SYNC_ERROR);
+        setPhase("SATELLITE WINDOW");
+      } else {
+        setPhase("PRIORITY DOWNLOAD");
+        setConnState(CONN_STATES.SYNCED);
+        setPhase("SYNCED");
+        await setLastSync(Date.now());
+      }
       setForceSyncError(false);
     } catch {
-      setConnState("SYNC_ERROR");
+      setConnState(CONN_STATES.SYNC_ERROR);
     }
     await refreshAll();
     setSyncing(false);
   }
 
   async function retryDownload(pkgId) {
-    setConnState("SYNCING");
-    try { await api.retryDownload(pkgId); setConnState("ONLINE"); } catch { setConnState("SYNC_ERROR"); }
+    setConnState(CONN_STATES.SYNCING);
+    try {
+      await api.retryDownload(pkgId);
+      setConnState(CONN_STATES.SYNCED);
+    } catch {
+      setConnState(CONN_STATES.SYNC_ERROR);
+    }
     await refreshAll();
   }
 
@@ -46,43 +79,59 @@ export default function Sync({ student, networkOn, connState, setConnState }) {
     setConflicts((c) => c.filter((x) => x.id !== id));
   }
 
-  const lastSyncEntry = history.find((h) => h.message.includes("Sync complete"));
-  const pendingUploads = queue.uploads.filter((u) => u.sync_status !== "synced").length;
-  const pendingDownloads = ranked.filter((p) => p.label !== "SKIPPED").length;
+  const lastSyncEntry = history.find((h) => (h.message || "").includes("Sync complete"));
+  const pendingUploads = queue.uploads.filter((u) => u.sync_status !== "synced");
+  const failedDownloads = queue.downloads.filter((d) => d.status === "failed");
+  const downloading = queue.downloads.find((d) => d.status === "syncing");
+  const completed = queue.uploads.filter((u) => u.sync_status === "synced").length;
 
   return (
     <div className="view-max">
-      <div className="section" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div className="page-title">Sync Center</div>
-          <div className="page-subtitle">
-            Connects through a simulated satellite gateway (MockSatelliteAdapter) for this hackathon build — a documented interface so a real provider can be added later without other code changes.
-          </div>
-        </div>
-        <Button onClick={runSync} disabled={!networkOn || syncing}>
-          <RefreshCw size={14} className={syncing ? "" : ""} /> {syncing ? "Syncing…" : "Sync now"}
-        </Button>
-      </div>
+      <PageHeader
+        title="Sync"
+        subtitle="Visualizes the offline → satellite → synced pipeline. The gateway is MockSatelliteAdapter."
+        action={
+          <Button onClick={runSync} disabled={!networkOn || syncing} loading={syncing}>
+            <RefreshCw size={14} /> {syncing ? "Syncing…" : "Open satellite window"}
+          </Button>
+        }
+      />
+
+      <div className="mvp-note section">Satellite connection simulated for MVP</div>
+
+      <div className="section"><SyncTimeline active={phase} /></div>
 
       <div className="section">
         <StatRow
           items={[
-            { label: "Connection", value: connState.replace("_", " ") },
+            { label: "Connection", value: connState.replaceAll("_", " ") },
             { label: "Last synchronized", value: lastSyncEntry ? new Date(lastSyncEntry.created_at).toLocaleTimeString() : "Never" },
-            { label: "Pending uploads", value: pendingUploads },
-            { label: "Pending downloads", value: pendingDownloads },
+            { label: "Pending", value: pendingUploads.length + localQueued.length, sub: "events" },
+            { label: "Uploading", value: syncing ? `${completed} / ${Math.max(pendingUploads.length, 1)}` : "Idle" },
           ]}
         />
       </div>
 
       {!networkOn && (
-        <div className="callout section" style={{ fontSize: 12.5 }}>Enable "Satellite / Internet" in the header to run a sync.</div>
+        <div className="callout warning section" style={{ fontSize: 12.5 }}>
+          Enable Satellite / Internet in the header (or the button below) to open a simulated pass window.
+          <div style={{ marginTop: 8 }}>
+            <Button small onClick={() => { setHubOn?.(true); setNetworkOn?.(true); }}>Enable simulated satellite</Button>
+          </div>
+        </div>
       )}
-      {connState === "SYNC_ERROR" && (
+      {connState === CONN_STATES.SYNC_ERROR && (
         <div className="callout danger section" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
           <AlertTriangle size={15} color="var(--danger)" style={{ flexShrink: 0, marginTop: 1 }} />
-          <div style={{ fontSize: 12.5 }}>A package failed validation and was not written to the local database. Nothing was overwritten. Retry the failed item in the table below.</div>
+          <div style={{ fontSize: 12.5 }}>
+            Sync failed. Your data remains queued. Nothing was overwritten.
+            <div style={{ marginTop: 8 }}><Button small variant="danger" onClick={runSync}>Retry</Button></div>
+          </div>
         </div>
+      )}
+
+      {downloading && (
+        <div className="callout section">Downloading {downloading.id} · Priority {downloading.label || "HIGH"}</div>
       )}
 
       <div className="section">
@@ -104,7 +153,7 @@ export default function Sync({ student, networkOn, connState, setConnState }) {
                 <tr key={p.id}>
                   <td style={{ fontWeight: 600 }}>{p.name}</td>
                   <td className="muted">{p.size_mb} MB</td>
-                  <td className="muted" style={{ fontSize: 12 }}>{p.reasons.join(", ") || "—"}</td>
+                  <td className="muted" style={{ fontSize: 12 }}>{(p.reasons || []).join(", ") || "—"}</td>
                   <td className="mono">{p.score}</td>
                   <td><PriorityBadge label={p.label} /></td>
                 </tr>
@@ -116,15 +165,18 @@ export default function Sync({ student, networkOn, connState, setConnState }) {
 
       <div className="section" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div className="panel">
-          <div className="panel-header"><div className="section-title">Upload queue</div></div>
-          {queue.uploads.length === 0 ? (
+          <div className="panel-header"><div className="section-title">Pending uploads</div></div>
+          {localQueued.map((u) => (
+            <div key={u.id || u.createdAt} className="panel-row"><span style={{ fontSize: 12.5 }}>{u.type} (device)</span><SyncStatusBadge status="QUEUED" /></div>
+          ))}
+          {pendingUploads.length === 0 && localQueued.length === 0 ? (
             <div className="panel-body muted" style={{ fontSize: 12.5 }}>Nothing queued.</div>
-          ) : queue.uploads.slice(0, 8).map((u) => (
+          ) : pendingUploads.slice(0, 8).map((u) => (
             <div key={u.id} className="panel-row"><span style={{ fontSize: 12.5 }}>{u.type}</span><SyncStatusBadge status={u.sync_status} /></div>
           ))}
         </div>
         <div className="panel">
-          <div className="panel-header"><div className="section-title">Download queue</div></div>
+          <div className="panel-header"><div className="section-title">Downloads</div></div>
           {queue.downloads.length === 0 ? (
             <div className="panel-body muted" style={{ fontSize: 12.5 }}>Run a sync to populate this list.</div>
           ) : queue.downloads.map((d) => (
@@ -138,6 +190,10 @@ export default function Sync({ student, networkOn, connState, setConnState }) {
           ))}
         </div>
       </div>
+
+      {failedDownloads.length > 0 && (
+        <div className="callout danger section">⚠ Connection interrupted on {failedDownloads.length} package(s). Retry from the download list.</div>
+      )}
 
       {conflicts.length > 0 && (
         <div className="panel section">

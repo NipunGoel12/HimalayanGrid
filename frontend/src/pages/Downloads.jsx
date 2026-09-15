@@ -1,87 +1,101 @@
 import React, { useEffect, useState } from "react";
-import { HardDrive } from "lucide-react";
+import { HardDrive, Download } from "lucide-react";
 import { api } from "../services/apiClient.js";
-import { Badge, EmptyState, SkeletonLines } from "../components/ui.jsx";
+import { DownloadCard, EmptyState, SkeletonLines, PageHeader, StatRow, Button } from "../components/ui.jsx";
 
-export default function Downloads() {
+function mapStatus(row) {
+  const s = (row.status || "").toLowerCase();
+  if (s === "synced") return "DOWNLOADED";
+  if (s === "syncing") return "DOWNLOADING";
+  if (s === "failed") return "FAILED";
+  if (s === "queued") return "QUEUED";
+  if (s === "skipped") return "AVAILABLE";
+  return (row.status || "AVAILABLE").toUpperCase();
+}
+
+export default function Downloads({ setView, openLesson }) {
   const [lessons, setLessons] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [catalog, setCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try { setLessons(await api.getLessons()); } catch { setLessons([]); }
-      try {
-        const { downloads } = await api.getSyncQueue();
-        setPackages(downloads.filter((d) => d.status === "synced"));
-      } catch { setPackages([]); }
-      setLoading(false);
-    })();
-  }, []);
+  async function load() {
+    setLoading(true);
+    try { setLessons(await api.getLessons()); } catch { setLessons([]); }
+    try {
+      const { downloads } = await api.getSyncQueue();
+      setPackages(downloads || []);
+    } catch { setPackages([]); }
+    try { setCatalog(await api.getSyncCatalog("std-001")); } catch { setCatalog([]); }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
 
   const cachedLessons = lessons.filter((l) => l.cached);
-  const totalMb = cachedLessons.reduce((a, l) => a + l.size_mb, 0);
+  const totalMb = cachedLessons.reduce((a, l) => a + (l.size_mb || 0), 0);
+  const failed = packages.filter((p) => p.status === "failed");
+
+  const packageCards = (catalog.length ? catalog : packages).map((p) => {
+    const row = packages.find((d) => d.id === p.id) || p;
+    return {
+      id: p.id,
+      name: p.name || p.id,
+      size: `${p.size_mb ?? "—"} MB`,
+      priority: p.label || row.label,
+      status: mapStatus(row),
+      error: row.error,
+    };
+  });
 
   if (loading) return <div className="view-max panel panel-pad"><SkeletonLines count={5} /></div>;
 
   return (
     <div className="view-max">
-      <div className="section">
-        <div className="page-title">Downloads</div>
-        <div className="page-subtitle">Content stored on this device and available with the network off.</div>
-      </div>
+      <PageHeader
+        title="Downloads"
+        subtitle="Offline content on this device. Download lessons before heading away from the hub."
+        action={<Button variant="secondary" small onClick={() => setView?.("sync")}><Download size={13} /> Open Sync</Button>}
+      />
 
-      <div className="panel panel-pad section" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <HardDrive size={18} color="var(--text-faint)" />
-        <div style={{ fontSize: 13 }}>
-          <b>{cachedLessons.length}</b> lesson(s) cached · <b>{totalMb.toFixed(1)} MB</b> used on this device
-        </div>
+      <div className="section">
+        <StatRow items={[
+          { label: "Lessons cached", value: cachedLessons.length },
+          { label: "Storage used", value: `${totalMb.toFixed(1)} MB` },
+          { label: "Packages", value: packageCards.filter((p) => p.status === "DOWNLOADED").length },
+          { label: "Failed", value: failed.length, color: failed.length ? "var(--danger)" : undefined },
+        ]} />
       </div>
 
       <div className="panel section">
         <div className="panel-header"><div className="section-title">Downloaded lessons</div></div>
         {cachedLessons.length === 0 ? (
-          <EmptyState title="No lessons downloaded" body="Visit Sync Center to download lesson content for offline use." />
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Lesson</th><th>Subject</th><th>Language</th><th>Size</th></tr></thead>
-              <tbody>
-                {cachedLessons.map((l) => (
-                  <tr key={l.id}>
-                    <td style={{ fontWeight: 600 }}>{l.title}</td>
-                    <td className="muted">{l.subject}</td>
-                    <td className="muted">{l.language}</td>
-                    <td className="muted">{l.size_mb} MB</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          <EmptyState
+            icon={HardDrive}
+            title="No lessons saved yet"
+            body="Download lessons before heading offline."
+            action={<Button onClick={() => setView?.("sync")}>Go to Sync</Button>}
+          />
+        ) : cachedLessons.map((l) => (
+          <DownloadCard
+            key={l.id}
+            item={{ name: l.title, size: `${l.size_mb} MB`, priority: l.weak_topic || "CORE", status: "DOWNLOADED" }}
+            onOpen={() => openLesson?.(l.id, l.subject)}
+          />
+        ))}
       </div>
 
       <div className="panel">
-        <div className="panel-header"><div className="section-title">Synced content packages</div></div>
-        {packages.length === 0 ? (
-          <div className="panel-body muted" style={{ fontSize: 12.5 }}>No packages synced yet — run a sync from the Sync Center.</div>
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Package</th><th>Priority</th><th>Synced</th></tr></thead>
-              <tbody>
-                {packages.map((p) => (
-                  <tr key={p.id}>
-                    <td style={{ fontWeight: 600 }}>{p.id}</td>
-                    <td><Badge tone="neutral">{p.label}</Badge></td>
-                    <td className="muted">{new Date(p.updated_at).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="panel-header"><div className="section-title">Content packages</div></div>
+        {packageCards.length === 0 ? (
+          <div className="panel-body muted" style={{ fontSize: 12.5 }}>No package status yet — run a sync to populate this list.</div>
+        ) : packageCards.map((p) => (
+          <DownloadCard
+            key={p.id}
+            item={p}
+            onRetry={p.status === "FAILED" ? async () => { try { await api.retryDownload(p.id); await load(); } catch { await load(); } } : undefined}
+          />
+        ))}
       </div>
     </div>
   );

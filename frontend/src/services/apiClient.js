@@ -1,26 +1,29 @@
 /**
- * apiClient — thin wrapper Bhavay's frontend uses to talk to Nipun's backend.
- * Frontend components never call fetch() directly or duplicate backend logic;
- * they go through here, so the REST contract stays a stable seam.
- *
- * Every GET falls back to whatever is cached locally when the request fails
- * (network off, hub-only, or backend unreachable), so screens never break
- * with the network off — they just serve local data.
+ * apiClient — thin wrapper Bhavya's frontend uses to talk to Nipun/Shagun backends.
+ * Screens never call fetch() directly.
  */
 import * as store from "./offlineStore.js";
 
 const BASE = "/api";
 
 async function request(path, options = {}) {
-  const res = await fetch(BASE + path, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed: ${res.status}`);
+  const { timeoutMs = 12000, ...rest } = options;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(BASE + path, {
+      headers: { "Content-Type": "application/json" },
+      signal: ctrl.signal,
+      ...rest,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Request failed: ${res.status}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json();
 }
 
 export const api = {
@@ -40,7 +43,13 @@ export const api = {
   updateProfile: (id, payload) => request(`/students/${id}/profile`, { method: "PUT", body: JSON.stringify(payload) }),
 
   async getProgress(id = "std-001") {
-    return request(`/students/${id}/progress`);
+    try {
+      return await request(`/students/${id}/progress`);
+    } catch {
+      const events = await store.getQueuedEvents();
+      const attempts = await store.getLocalAttempts();
+      return { events, attempts, offline: true };
+    }
   },
 
   async getLessons() {
@@ -55,27 +64,68 @@ export const api = {
     }
   },
 
-  getLesson: (id) => request(`/lessons/${id}`),
+  async getLesson(id) {
+    try {
+      return await request(`/lessons/${id}`);
+    } catch (e) {
+      const cached = await store.getCachedLessons();
+      const found = cached.find((l) => l.id === id);
+      if (found) return found;
+      throw e;
+    }
+  },
 
-  generateQuiz: (studentId, topic) =>
-    request("/quiz/generate", { method: "POST", body: JSON.stringify({ studentId, topic }) }),
+  async generateQuiz(studentId, topic) {
+    try {
+      const data = await request("/quiz/generate", { method: "POST", body: JSON.stringify({ studentId, topic }) });
+      await store.cacheQuiz(data.topic, data);
+      return data;
+    } catch (e) {
+      const cached = await store.getCachedQuiz(topic);
+      if (cached) return { ...cached, fromCache: true };
+      throw e;
+    }
+  },
 
   async submitQuiz(payload) {
     try {
-      return await request("/quiz/submit", { method: "POST", body: JSON.stringify(payload) });
+      const res = await request("/quiz/submit", { method: "POST", body: JSON.stringify(payload) });
+      await store.saveAttemptLocally({ ...res, offline: false, createdAt: Date.now() });
+      return res;
     } catch (e) {
-      // Offline: score it locally with the same 70%-threshold rule and queue the event.
-      const total = payload.questionIds.length;
-      // We don't have correct answers offline, so this is a conservative local
-      // fallback: the attempt is recorded as pending and re-scored on next sync.
-      const attempt = { id: "local-" + Date.now(), topic: payload.topic, score: null, pendingServerScore: true };
+      const attempt = {
+        id: "local-" + Date.now(),
+        topic: payload.topic,
+        score: null,
+        pendingServerScore: true,
+        offline: true,
+        createdAt: Date.now(),
+        totalQuestions: payload.questionIds?.length,
+      };
       await store.saveAttemptLocally(attempt);
       await store.queueLearningEvent({ type: "quiz-submitted-offline", payload, createdAt: Date.now() });
       return attempt;
     }
   },
 
-  askTutor: (payload) => request("/ai/ask", { method: "POST", body: JSON.stringify(payload) }),
+  async askTutor(payload) {
+    try {
+      const res = await request("/ai/ask", { method: "POST", body: JSON.stringify(payload) });
+      const unanswered = res.matchedTopic === null;
+      if (unanswered) await store.saveUnanswered(payload.question);
+      return { ...res, unanswered };
+    } catch {
+      await store.saveUnanswered(payload.question);
+      await store.queueLearningEvent({ type: "ai-question-unanswered", payload: { question: payload.question, hubUnavailable: true }, createdAt: Date.now() });
+      return {
+        text: "I don't have enough local knowledge to answer this yet — and the Local Hub is unreachable right now.",
+        mode: "local",
+        matchedTopic: null,
+        unanswered: true,
+        hubUnavailable: true,
+      };
+    }
+  },
 
   async completeMission(payload) {
     try {
@@ -92,19 +142,18 @@ export const api = {
 
   getSyncStatus: () => request("/sync/status"),
   getSyncCatalog: (studentId = "std-001") => request(`/sync/catalog?studentId=${studentId}`),
-  runSync: (payload) => request("/sync/run", { method: "POST", body: JSON.stringify(payload) }),
+  runSync: (payload) => request("/sync/run", { method: "POST", body: JSON.stringify(payload), timeoutMs: 60000 }),
   getSyncQueue: () => request("/sync/queue"),
   getSyncHistory: () => request("/sync/history"),
   getGatewayLog: () => request("/sync/gateway-log"),
   getConflicts: () => request("/sync/conflicts"),
   resolveConflict: (id) => request(`/sync/conflicts/${id}/resolve`, { method: "POST" }),
-  retryDownload: (id) => request(`/sync/downloads/${id}/retry`, { method: "POST" }),
+  retryDownload: (id) => request(`/sync/downloads/${id}/retry`, { method: "POST", timeoutMs: 30000 }),
   pushEvent: (payload) => request("/sync/events", { method: "POST", body: JSON.stringify(payload) }),
 
   getTeacherDashboard: () => request("/teacher/dashboard"),
   requestPackage: (payload) => request("/teacher/requests", { method: "POST", body: JSON.stringify(payload) }),
 
-  // --- Explorer content model: topics, missions, gamification ---
   async getTopics(category, studentId = "std-001") {
     const qs = category ? `?category=${encodeURIComponent(category)}&studentId=${studentId}` : `?studentId=${studentId}`;
     try {
@@ -134,20 +183,35 @@ export const api = {
   saveTopic: (id, studentId = "std-001") =>
     request(`/topics/${id}/save`, { method: "POST", body: JSON.stringify({ studentId }) }),
 
-  getMissions: (studentId = "std-001") => request(`/missions?studentId=${studentId}`),
+  async getMissions(studentId = "std-001") {
+    try {
+      const missions = await request(`/missions?studentId=${studentId}`);
+      await store.cacheMissions(missions);
+      return missions;
+    } catch (e) {
+      const cached = await store.getCachedMissions();
+      if (cached.length) return cached;
+      throw e;
+    }
+  },
   getGamification: (studentId = "std-001") => request(`/students/${studentId}/gamification`),
 };
 
-/** Flushes any learning events queued locally while offline, once back online. */
 export async function flushQueuedEvents() {
   const queued = await store.getQueuedEvents();
   if (!queued.length) return 0;
+  const remaining = [];
   for (const ev of queued) {
     try {
       await api.pushEvent({ studentId: "std-001", type: ev.type, payload: ev.payload });
     } catch {
-      return 0; // stop; will retry next time we're online
+      remaining.push(ev);
     }
+  }
+  if (remaining.length) {
+    await store.clearQueuedEvents();
+    for (const ev of remaining.reverse()) await store.queueLearningEvent(ev);
+    return queued.length - remaining.length;
   }
   await store.clearQueuedEvents();
   return queued.length;

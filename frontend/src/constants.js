@@ -1,64 +1,114 @@
 export const MISSION_TITLE = "Understand Your Mountain";
 export const MISSION_VILLAGE = "Lachen, North Sikkim";
 
-// Child-first application navigation. Teacher/Settings stay separate and
-// professional in tone (per the redesign brief) rather than blended into the
-// exploration experience.
+/** Fixed connectivity states used by the Local Hub / sync backend. Do not rename. */
+export const CONN_STATES = {
+  OFFLINE: "OFFLINE",
+  LOCAL_HUB: "LOCAL_HUB",
+  SYNCING: "SYNCING",
+  SYNCED: "SYNCED",
+  SYNC_ERROR: "SYNC_ERROR",
+};
+
+export const CONN_COPY = {
+  OFFLINE: {
+    label: "Offline",
+    detail: "Cached learning available",
+    tone: "neutral",
+  },
+  LOCAL_HUB: {
+    label: "Local Hub",
+    detail: "Connected to local learning network",
+    tone: "info",
+  },
+  SYNCING: {
+    label: "Syncing",
+    detail: "Uploading queued items…",
+    tone: "info",
+  },
+  SYNCED: {
+    label: "Synced",
+    detail: "Progress is up to date",
+    tone: "success",
+  },
+  SYNC_ERROR: {
+    label: "Sync error",
+    detail: "Tap to retry",
+    tone: "danger",
+  },
+};
+
+export const PACKAGE_STATUSES = ["AVAILABLE", "QUEUED", "DOWNLOADING", "DOWNLOADED", "FAILED"];
+
+export const DEMO_CURRICULUM = [
+  { match: /fraction/i, label: "Fractions", difficulty: "Core", minutes: 12 },
+  { match: /water/i, label: "Water Cycle", difficulty: "Core", minutes: 14 },
+  { match: /contour/i, label: "Contour Maps", difficulty: "Practice", minutes: 10 },
+  { match: /himalay|ladakh|sikkim|everest|kanchen/i, label: "Himalayan Geography", difficulty: "Explore", minutes: 8 },
+  { match: /forest|glacier|climate|panda|leopard|environment/i, label: "Environment", difficulty: "Explore", minutes: 8 },
+  { match: /satellite|space/i, label: "Basic Satellite Communication", difficulty: "Mission", minutes: 9 },
+];
+
 export const NAV_GROUPS = [
   {
-    label: "Explore",
+    label: "Learn",
     items: [
       { id: "home", label: "Home", icon: "home" },
-      { id: "map", label: "Himalayan Map", icon: "map" },
-      { id: "explore", label: "Explore Topics", icon: "compass" },
-      { id: "missions", label: "Missions", icon: "target" },
-      { id: "quiz", label: "Quizzes", icon: "checkSquare" },
-      { id: "guide", label: "Ask a Guide", icon: "messageCircle" },
-      { id: "story", label: "Stories", icon: "bookOpen" },
-    ],
-  },
-  {
-    label: "Classwork",
-    items: [
+      { id: "explore", label: "Explore", icon: "compass" },
       { id: "courses", label: "Courses", icon: "layers" },
       { id: "learning", label: "My Learning", icon: "graduationCap" },
-      { id: "progress", label: "Class Progress", icon: "barChart2" },
     ],
   },
   {
-    label: "My Space",
+    label: "Practice",
     items: [
-      { id: "profile", label: "My Profile", icon: "user" },
-      { id: "library", label: "Offline Library", icon: "download" },
-      { id: "satellite", label: "Learning Satellite", icon: "radioTower" },
+      { id: "quiz", label: "Quiz", icon: "checkSquare" },
+      { id: "missions", label: "Missions", icon: "target" },
+      { id: "guide", label: "Ask a Guide", icon: "messageCircle" },
     ],
   },
   {
-    label: "School",
-    items: [{ id: "teacher", label: "Teacher", icon: "users" }],
+    label: "Offline & Sync",
+    items: [
+      { id: "library", label: "Downloads", icon: "download" },
+      { id: "sync", label: "Sync", icon: "refreshCw" },
+      { id: "satellite", label: "Satellite", icon: "radioTower" },
+    ],
   },
   {
-    label: "Account",
-    items: [{ id: "settings", label: "Settings", icon: "settings" }],
+    label: "More",
+    items: [
+      { id: "map", label: "Himalayan Map", icon: "map" },
+      { id: "story", label: "Stories", icon: "bookOpen" },
+      { id: "profile", label: "My Profile", icon: "user" },
+      { id: "progress", label: "Class Progress", icon: "barChart2" },
+      { id: "teacher", label: "Teacher", icon: "users" },
+      { id: "settings", label: "Settings", icon: "settings" },
+    ],
   },
 ];
 
-// Category metadata shared by Explore, the Map mode switcher, and topic cards.
+export const MOBILE_NAV = [
+  { id: "home", label: "Home", icon: "home" },
+  { id: "explore", label: "Explore", icon: "compass" },
+  { id: "learning", label: "Learn", icon: "graduationCap" },
+  { id: "missions", label: "Missions", icon: "target" },
+  { id: "profile", label: "Profile", icon: "user" },
+];
+
 export const CATEGORIES = {
-  mountains: { label: "Mountains", icon: "🏔️", color: "#2f6f6b" },
-  rivers: { label: "Rivers", icon: "🌊", color: "#2a6fb0" },
-  animals: { label: "Animals", icon: "🐆", color: "#b0562a" },
-  forests: { label: "Forests", icon: "🌲", color: "#3f8f5b" },
-  weather: { label: "Weather", icon: "🌦️", color: "#c98a2f" },
-  history: { label: "History", icon: "📜", color: "#8a5a2f" },
-  culture: { label: "Culture", icon: "🎭", color: "#c04f7a" },
-  science: { label: "Science", icon: "🔬", color: "#6a5acd" },
-  space: { label: "Space", icon: "🌌", color: "#3a3a7a" },
-  satellites: { label: "Satellites", icon: "🛰️", color: "#2a5aa0" },
+  mountains: { label: "Mountains", icon: "🏔️", color: "#4DA3FF" },
+  rivers: { label: "Rivers", icon: "🌊", color: "#6CC5FF" },
+  animals: { label: "Animals", icon: "🐆", color: "#FFC857" },
+  forests: { label: "Forests", icon: "🌲", color: "#45D483" },
+  weather: { label: "Weather", icon: "🌦️", color: "#6CC5FF" },
+  history: { label: "History", icon: "📜", color: "#C4A574" },
+  culture: { label: "Culture", icon: "🎭", color: "#E08BB0" },
+  science: { label: "Science", icon: "🔬", color: "#8B9CFF" },
+  space: { label: "Space", icon: "🌌", color: "#6A7AD8" },
+  satellites: { label: "Satellites", icon: "🛰️", color: "#4DA3FF" },
 };
 
-// Map "modes" group several raw categories under one teaching lens, per the
-// product brief (Geography / History / Environment / Culture / Science / Satellite).
 export const MAP_MODES = [
   { id: "geography", label: "Geography", icon: "🌍", categories: ["mountains", "rivers"] },
   { id: "history", label: "History", icon: "📜", categories: ["history"] },
@@ -68,8 +118,6 @@ export const MAP_MODES = [
   { id: "satellite", label: "Satellite", icon: "🛰️", categories: ["satellites"] },
 ];
 
-// Journey path shown on the Home screen — a fixed narrative order through
-// the categories a child progresses through.
 export const JOURNEY_STEPS = [
   { id: "mountains", label: "Explore Himalayas", icon: "🏔️" },
   { id: "forests", label: "Discover Forests", icon: "🌲" },
@@ -80,5 +128,4 @@ export const JOURNEY_STEPS = [
   { id: "satellites", label: "Satellite Mission", icon: "🛰️" },
 ];
 
-// Safe, illustrated avatar choices — no photo uploads from children.
 export const AVATAR_OPTIONS = ["🧑‍🚀", "🧗", "🦁", "🐼", "🐧", "🦉", "🐲", "🧑‍🌾", "🐯", "🦊", "🐰", "🐨"];

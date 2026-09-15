@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { CheckCircle2, PlayCircle } from "lucide-react";
-import { Badge, Button } from "../components/ui.jsx";
+import { Button, PageHeader } from "../components/ui.jsx";
 import { api } from "../services/apiClient.js";
+import { CONN_STATES } from "../constants.js";
 
 function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
@@ -10,26 +11,24 @@ export default function Demo({ setView, setNetworkOn, setHubOn, setConnState, st
   const [step, setStep] = useState(-1);
 
   const script = [
-    { label: "Network off", run: async () => { setNetworkOn(false); setHubOn(false); } },
-    { label: "Student opens app", run: async () => setView("dashboard") },
+    { label: "Open HLG dashboard", run: async () => setView("home") },
+    { label: "Turn off internet", run: async () => { setNetworkOn(false); setHubOn(false); } },
     { label: "Open a cached lesson", run: async () => setView("learning") },
-    { label: "Ask the offline AI Tutor", run: async () => setView("tutor") },
-    { label: "Complete Earth / Mountain Mission", run: async () => setView("mission") },
-    { label: "Take a personalized quiz", run: async () => setView("quiz") },
-    { label: "Progress saved locally", run: async () => setView("progress") },
-    { label: "Enable satellite sync", run: async () => { setHubOn(true); setNetworkOn(true); setView("sync"); } },
-    { label: "Smart Priority Engine ranks content", run: async () => {} },
+    { label: "Ask Local AI a supported question", run: async () => { setHubOn(true); setView("guide"); } },
+    { label: "Complete a quiz (saved locally)", run: async () => setView("quiz") },
+    { label: "Show queued events on Sync", run: async () => setView("sync") },
+    { label: "Enable simulated satellite window", run: async () => { setHubOn(true); setNetworkOn(true); setView("satellite"); } },
     {
-      label: "Mock satellite gateway syncs", run: async () => {
-        setConnState("SYNCING");
+      label: "Upload + priority download → SYNCED",
+      run: async () => {
+        setConnState(CONN_STATES.SYNCING);
         try {
           const res = await api.runSync({ studentId: student.id, simulateFailure: false });
-          setConnState(res.status === "SYNC_ERROR" ? "SYNC_ERROR" : "ONLINE");
-        } catch { setConnState("SYNC_ERROR"); }
+          setConnState(res.status === "SYNC_ERROR" ? CONN_STATES.SYNC_ERROR : CONN_STATES.SYNCED);
+        } catch { setConnState(CONN_STATES.SYNC_ERROR); }
       },
     },
-    { label: "Network off again", run: async () => { setNetworkOn(false); setHubOn(false); } },
-    { label: "Open the newly synced content", run: async () => setView("courses") },
+    { label: "Return to learning with updated state", run: async () => setView("home") },
   ];
 
   async function play() {
@@ -37,22 +36,20 @@ export default function Demo({ setView, setNetworkOn, setHubOn, setConnState, st
     for (let i = 0; i < script.length; i++) {
       setStep(i);
       await script[i].run();
-      await wait(1500);
+      await wait(1400);
     }
     setRunning(false);
   }
 
   return (
     <div className="view-max" style={{ maxWidth: 560 }}>
-      <div className="section">
-        <Badge tone="brand">For judges</Badge>
-        <div className="page-title" style={{ marginTop: 8 }}>Hackathon Demo Mode</div>
-        <div className="page-subtitle">
-          Plays the full story end-to-end in under three minutes: offline learning, Earth mission, personalized quiz, local save, smart satellite sync, then continued offline learning.
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="For judges"
+        title="Hackathon Demo Mode"
+        subtitle="Repeats the 3-minute student journey: offline learning → Local AI → queued events → simulated satellite sync."
+      />
 
-      <Button onClick={play} disabled={running}><PlayCircle size={15} /> {running ? "Running demo…" : "Play full demo"}</Button>
+      <Button onClick={play} disabled={running} loading={running}><PlayCircle size={15} /> {running ? "Running demo…" : "Play full demo"}</Button>
 
       <div className="panel section">
         {script.map((s, i) => (

@@ -1,68 +1,122 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { PlayCircle, Trash2 } from "lucide-react";
-import { Button, Badge } from "../components/ui.jsx";
-import { resetLocalDb } from "../services/offlineStore.js";
+import { Button, Badge, PageHeader, ConnectivityStatus } from "../components/ui.jsx";
+import { resetLocalDb, getSettings, saveSettings, getQueuedEvents, getCachedLessons } from "../services/offlineStore.js";
 
-export default function SettingsPage({ student, setView }) {
+export default function SettingsPage({ student, setView, connState }) {
   const [cleared, setCleared] = useState(false);
+  const [settings, setSettings] = useState({ preferLocalAi: true, language: student.language });
+  const [storage, setStorage] = useState(null);
+  const [queued, setQueued] = useState(0);
+  const [lessons, setLessons] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      setSettings(await getSettings());
+      setQueued((await getQueuedEvents()).length);
+      setLessons((await getCachedLessons()).length);
+      if (navigator.storage?.estimate) {
+        const est = await navigator.storage.estimate();
+        setStorage(est);
+      }
+    })();
+  }, []);
+
+  async function persist(next) {
+    setSettings(next);
+    await saveSettings(next);
+  }
 
   async function clearOfflineData() {
     await resetLocalDb();
     setCleared(true);
   }
 
+  const usedMb = storage?.usage != null ? (storage.usage / (1024 * 1024)).toFixed(1) : "—";
+
   return (
     <div className="view-max" style={{ maxWidth: 640 }}>
-      <div className="section">
-        <div className="page-title">Settings</div>
-        <div className="page-subtitle">Profile, offline storage and developer tools.</div>
-      </div>
+      <PageHeader title="Settings" subtitle="Language, offline preferences, storage and about HLG." />
 
       <div className="panel section">
         <div className="panel-header"><div className="section-title">Profile</div></div>
         <div className="panel-body kv-grid">
           <dt>Name</dt><dd>{student.name}</dd>
           <dt>Grade</dt><dd>{student.grade}</dd>
-          <dt>Language</dt><dd>{student.language}</dd>
           <dt>Village</dt><dd>{student.village}</dd>
-          <dt>Weak topics</dt><dd>{student.weak_topics.join(", ") || "None flagged"}</dd>
+          <dt>Weak topics</dt><dd>{student.weak_topics?.join(", ") || "None flagged"}</dd>
         </div>
       </div>
 
       <div className="panel section">
-        <div className="panel-header"><div className="section-title">Preferences</div></div>
-        <div className="panel-body" style={{ display: "grid", gap: 14 }}>
-          <div>
-            <label className="field-label">Interface language</label>
-            <select disabled style={{ width: 220 }}><option>{student.language}</option></select>
-            <div className="faint" style={{ fontSize: 11.5, marginTop: 4 }}>Additional languages coming soon.</div>
-          </div>
-          <div>
-            <label className="field-label">Connectivity</label>
-            <div className="muted" style={{ fontSize: 12.5 }}>Local Hub and Satellite/Internet toggles are available in the header on every page.</div>
+        <div className="panel-header"><div className="section-title">Language</div></div>
+        <div className="panel-body">
+          <label className="field-label">Interface language</label>
+          <select
+            value={settings.language || student.language}
+            onChange={(e) => persist({ ...settings, language: e.target.value })}
+            style={{ width: 220 }}
+          >
+            <option>Hindi</option>
+            <option>English</option>
+            <option>Nepali</option>
+          </select>
+          <div className="faint" style={{ fontSize: 11.5, marginTop: 4 }}>Stored on this device. Lesson language still follows the catalog.</div>
+        </div>
+      </div>
+
+      <div className="panel section">
+        <div className="panel-header"><div className="section-title">Offline preferences</div></div>
+        <div className="panel-body" style={{ display: "grid", gap: 12 }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+            <input
+              type="checkbox"
+              checked={settings.preferLocalAi !== false}
+              onChange={(e) => persist({ ...settings, preferLocalAi: e.target.checked })}
+            />
+            Prefer Local AI even when internet is on
+          </label>
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            Connectivity toggles live in the header. Local Hub unavailable messages appear when the Express API cannot be reached.
           </div>
         </div>
       </div>
 
       <div className="panel section">
-        <div className="panel-header"><div className="section-title">Offline storage</div></div>
+        <div className="panel-header"><div className="section-title">Connectivity</div></div>
+        <div className="panel-body" style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <ConnectivityStatus state={connState || "OFFLINE"} mode="expanded" pending={queued} />
+          <div className="muted" style={{ fontSize: 12.5 }}>{queued} queued event(s) · {lessons} cached lesson(s)</div>
+        </div>
+      </div>
+
+      <div className="panel section">
+        <div className="panel-header"><div className="section-title">Storage</div></div>
         <div className="panel-body" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-          <div className="muted" style={{ fontSize: 12.5 }}>Clears the on-device cache (profile, lessons, quiz attempts, queued events). The Local Hub database is not affected.</div>
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            Browser estimate: {usedMb} MB used{storage?.quota ? ` of ${(storage.quota / (1024 * 1024)).toFixed(0)} MB` : ""}.
+            Clearing cache removes IndexedDB only — not the Local Hub SQLite database.
+          </div>
           <Button variant="danger" small onClick={clearOfflineData}><Trash2 size={13} /> Clear offline data</Button>
         </div>
         {cleared && <div className="panel-body" style={{ paddingTop: 0 }}><Badge tone="success">Offline cache cleared</Badge></div>}
       </div>
 
+      <div className="panel section">
+        <div className="panel-header"><div className="section-title">About HLG</div></div>
+        <div className="panel-body muted" style={{ fontSize: 12.5, lineHeight: 1.6 }}>
+          Himalayan Learning Grid is an offline-first PWA: student device → Local Hub API → SQLite.
+          When a simulated satellite window opens, queued events upload and priority packages download.
+          Frontend: Bhavya Vasudev · Offline AI: Nipun Goel · Satellite/sync: Shagun Mehta.
+        </div>
+      </div>
+
       <div className="panel">
-        <div className="panel-header"><div className="section-title">Developer &amp; technical tools</div></div>
+        <div className="panel-header"><div className="section-title">Demo tools</div></div>
         <div className="panel-body" style={{ display: "grid", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-            <div className="muted" style={{ fontSize: 12.5 }}>Runs the full hackathon demo script for judges.</div>
+            <div className="muted" style={{ fontSize: 12.5 }}>Guided ~3 minute judge path.</div>
             <Button variant="secondary" small onClick={() => setView("demo")}><PlayCircle size={13} /> Open demo mode</Button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-            <div className="muted" style={{ fontSize: 12.5 }}>Technical Sync Center: priority engine, upload/download queues and conflict resolution.</div>
-            <Button variant="secondary" small onClick={() => setView("sync")}>Open Sync Center</Button>
           </div>
         </div>
       </div>
