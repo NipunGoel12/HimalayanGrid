@@ -35,6 +35,10 @@ import {
   getLastSync,
   setLastSync,
 } from "./services/offlineStore.js";
+import {
+  getLocalProfile,
+  buildSyntheticStudent,
+} from "./services/localProfile.js";
 
 import Onboarding from "./pages/Onboarding.jsx";
 import Home_ from "./pages/Home.jsx";
@@ -268,19 +272,50 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
+      /*
+       * Local profile is the source of truth for the current offline session.
+       * It NEVER overwrites, deletes, or modifies backend/database seed data.
+       */
+      const localProfile = getLocalProfile();
+      let resolvedStudent = null;
+
+      /* Try backend first, then IndexedDB cache */
       try {
-        setStudent(
-          normalizeStudent(
-            await api.getStudent("std-001")
+        resolvedStudent = normalizeStudent(
+          await api.getStudent(
+            localProfile?.id || "std-001"
           )
         );
       } catch {
-        setStudent(
-          normalizeStudent(
-            await getCachedStudent()
-          )
+        resolvedStudent = normalizeStudent(
+          await getCachedStudent()
         );
       }
+
+      /*
+       * If we have a local profile, merge its fields into the resolved
+       * student (or build a synthetic one if no backend data exists).
+       * The local-{id} is preserved — we never claim to be "std-001".
+       */
+      if (localProfile?.onboardingComplete) {
+        if (resolvedStudent) {
+          resolvedStudent = {
+            ...resolvedStudent,
+            /* Overlay local profile fields — name, grade, village */
+            id: localProfile.id,
+            name: localProfile.name || resolvedStudent.name,
+            grade: localProfile.grade || resolvedStudent.grade,
+            village: localProfile.region || resolvedStudent.village,
+            language: localProfile.language || resolvedStudent.language,
+            _isLocalProfile: true,
+          };
+        } else {
+          /* No backend data at all — build a purely local student */
+          resolvedStudent = buildSyntheticStudent(localProfile);
+        }
+      }
+
+      setStudent(resolvedStudent);
 
       setOnboardedState(await getOnboarded());
 
@@ -300,8 +335,10 @@ export default function App() {
         // Cache if possible.
       }
 
+      const studentIdForApi = localProfile?.id || "std-001";
+
       try {
-        await api.getTopics(null, "std-001");
+        await api.getTopics(null, studentIdForApi);
       } catch {
         // Offline.
       }
@@ -313,7 +350,7 @@ export default function App() {
       ]) {
         try {
           await api.generateQuiz(
-            "std-001",
+            studentIdForApi,
             topic
           );
         } catch {
@@ -481,26 +518,39 @@ export default function App() {
   }
 
   if (bootDone && !student) {
-    return (
-      <div
-        className="panel panel-pad"
-        style={{
-          maxWidth: 420,
-          margin: "12vh auto",
-        }}
-      >
-        <div className="page-title">
-          Local Hub unavailable
-        </div>
+    /*
+     * No backend data AND no cached student. If there's a completed
+     * local profile, build a synthetic student so the app still works.
+     * This does NOT touch the backend database in any way.
+     */
+    const localProfile = getLocalProfile();
+    if (localProfile?.onboardingComplete) {
+      const synthetic = buildSyntheticStudent(localProfile);
+      /* Kick-start the app with the synthetic student */
+      setStudent(synthetic);
+      /* Fall through — the component will re-render with student set */
+    } else {
+      return (
+        <div
+          className="panel panel-pad"
+          style={{
+            maxWidth: 420,
+            margin: "12vh auto",
+          }}
+        >
+          <div className="page-title">
+            Local Hub unavailable
+          </div>
 
-        <div className="page-subtitle">
-          No student profile is cached on this
-          device yet. Start the backend once so
-          the explorer profile can be stored
-          offline.
+          <div className="page-subtitle">
+            No student profile is cached on this
+            device yet. Start the backend once so
+            the explorer profile can be stored
+            offline.
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   /*
