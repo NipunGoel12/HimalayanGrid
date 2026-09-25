@@ -3,6 +3,7 @@ import { Badge, Button, PageHeader, SyncTimeline } from "../components/ui.jsx";
 import { api } from "../services/apiClient.js";
 import { CONN_STATES } from "../constants.js";
 import { Building2, Cloud, Satellite, Smartphone } from "lucide-react";
+import LiveSatelliteSection from "../components/LiveSatelliteSection.jsx";
 
 const STEPS = [
   { icon: "🛰️", title: "Satellite receives data", text: "Lessons and quizzes wait for a pass window — simulated here by MockSatelliteAdapter." },
@@ -57,7 +58,9 @@ export default function LearningSatellite({ setView, student, networkOn, connSta
         title="Learning Satellite"
         subtitle="How learning reaches remote Himalayan schools when cables do not."
       />
-      <div className="mvp-note section">Satellite connection simulated for MVP</div>
+      <LiveSatelliteSection />
+
+      <div className="mvp-note section">Live tracking above uses real orbital, weather and imagery data · the data transfer below is still simulated for this MVP</div>
 
       <div
         className={`sync-visual-spatial section ${busy || connState === CONN_STATES.SYNCING ? "sync-running" : connState === CONN_STATES.SYNCED ? "sync-complete" : ""}`}

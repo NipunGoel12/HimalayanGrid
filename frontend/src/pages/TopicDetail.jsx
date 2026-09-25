@@ -3,6 +3,8 @@ import { Bookmark, BookmarkCheck, MessageCircle, CheckCircle2, XCircle, Download
 import { api } from "../services/apiClient.js";
 import { touchRecent } from "../services/offlineStore.js";
 import { Button, Badge, EmptyState, SkeletonLines, OfflineBadge } from "../components/ui.jsx";
+import PlacePhotoGallery from "../components/PlacePhotoGallery.jsx";
+import { TOPIC_COORDS } from "../data/topicCoordinates.js";
 
 export default function TopicDetail({ topicId, student, setView, onGamificationChange }) {
   const [topic, setTopic] = useState(null);
@@ -100,6 +102,15 @@ export default function TopicDetail({ topicId, student, setView, onGamificationC
             <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--glow)", marginBottom: 3 }}>DID YOU KNOW?</div>
             <div style={{ fontSize: 13.5 }}>{topic.fact}</div>
           </div>
+
+          {TOPIC_COORDS[topic.id] && (
+            <PlacePhotoGallery
+              lat={TOPIC_COORDS[topic.id][0]}
+              lon={TOPIC_COORDS[topic.id][1]}
+              title={topic.title}
+              mode="full"
+            />
+          )}
 
           {stage === "learn" && (
             <>

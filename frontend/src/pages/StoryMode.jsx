@@ -1,5 +1,9 @@
-import React, { useState } from "react";
-import { Badge } from "../components/ui.jsx";
+import React, { useEffect, useState } from "react";
+import { Volume2, Languages, Sparkles } from "lucide-react";
+import { Badge, Button } from "../components/ui.jsx";
+import { STORY_DIAGRAMS } from "../data/storyDiagrams.jsx";
+import { LANGUAGES } from "../data/fieldLabels.js";
+import { getStoryTranslation } from "../services/storyTranslate.js";
 
 const STORIES = [
   {
@@ -56,48 +60,97 @@ const STORIES = [
 export default function StoryMode() {
   const [storyId, setStoryId] = useState(STORIES[0].id);
   const [step, setStep] = useState(0);
+  const [lang, setLang] = useState(LANGUAGES[0]);
+  const [tr, setTr] = useState(null); // translated {title, steps} for the current story+lang, or null = show English
+  const [trState, setTrState] = useState("idle"); // idle | loading | error
   const story = STORIES.find((s) => s.id === storyId);
+  const Diagram = STORY_DIAGRAMS[storyId];
+  const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
 
   function pick(id) {
     setStoryId(id);
     setStep(0);
   }
 
+  useEffect(() => {
+    let cancelled = false;
+    setTr(null);
+    if (lang.code === "en") { setTrState("idle"); return; }
+    setTrState("loading");
+    getStoryTranslation(story.id, story, lang.code, lang.name)
+      .then((data) => { if (!cancelled) { setTr(data); setTrState("ready"); } })
+      .catch(() => { if (!cancelled) setTrState("error"); });
+    return () => { cancelled = true; };
+  }, [storyId, lang.code]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const shownTitle = tr?.title || story.title;
+  const shownSteps = story.steps.map((s, i) => ({ ...s, title: tr?.steps?.[i]?.title || s.title, text: tr?.steps?.[i]?.text || s.text }));
+
+  function speak(text) {
+    if (!canSpeak || !text) return;
+    const u = new SpeechSynthesisUtterance(text);
+    if (lang.speech) u.lang = lang.speech;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
+
   return (
-    <div className="view-max" style={{ maxWidth: 620 }}>
+    <div className="view-max" style={{ maxWidth: 640 }}>
       <div className="section">
-        <div className="page-title">Stories</div>
-        <div className="page-subtitle">Short illustrated stories that make big ideas easy to remember.</div>
+        <div className="page-title">📖 Story Time</div>
+        <div className="page-subtitle">Fun picture stories that turn big ideas into adventures — made for young explorers!</div>
       </div>
 
       <div className="section" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {STORIES.map((s) => (
-          <button key={s.id} className={`chip ${storyId === s.id ? "active" : ""}`} onClick={() => pick(s.id)}>{s.steps[0].icon} {s.title}</button>
+          <button key={s.id} className={`chip story-chip ${storyId === s.id ? "active" : ""}`} onClick={() => pick(s.id)}>{s.steps[0].icon} {s.title}</button>
         ))}
+      </div>
+
+      <div className="section story-lang-row">
+        <Languages size={14} />
+        <label htmlFor="story-lang" className="faint" style={{ fontSize: 12 }}>Read this story in</label>
+        <select id="story-lang" value={lang.code} onChange={(e) => setLang(LANGUAGES.find((l) => l.code === e.target.value) || LANGUAGES[0])}>
+          {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.native === l.name ? l.name : `${l.native} — ${l.name}`}</option>)}
+        </select>
+        {trState === "loading" && <Badge tone="brand" dot>Translating…</Badge>}
+        {trState === "error" && <Badge tone="warning">Couldn't translate — showing English. Try again once online.</Badge>}
+        {trState === "ready" && tr?.cached === false && <Badge tone="success">Translated ✨</Badge>}
       </div>
 
       <div className="panel panel-pad">
         <Badge tone="brand">{story.subject}</Badge>
-        <div className="page-title" style={{ fontSize: 18, margin: "8px 0 4px" }}>{story.title}</div>
+        <div className="page-title" style={{ fontSize: 18, margin: "8px 0 4px" }} dir={lang.code === "ur" ? "rtl" : undefined}>{shownTitle}</div>
 
-        <div style={{ marginTop: 10 }}>
-          {story.steps.map((s, i) => (
-            <div key={i} className="story-step" style={{ opacity: i <= step ? 1 : 0.35 }}>
+        {Diagram && (
+          <div className="story-diagram">
+            <Diagram />
+          </div>
+        )}
+
+        <div style={{ marginTop: 10 }} dir={lang.code === "ur" ? "rtl" : undefined}>
+          {shownSteps.map((s, i) => (
+            <div key={i} className={`story-step ${i === step ? "current" : ""}`} style={{ opacity: i <= step ? 1 : 0.35 }}>
               <div className="story-step-icon">{s.icon}</div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 650, fontSize: 13.5 }}>{s.title}</div>
                 <div className="muted" style={{ fontSize: 12.5, marginTop: 2, lineHeight: 1.5 }}>{s.text}</div>
               </div>
+              {canSpeak && i <= step && (
+                <button className="story-listen" onClick={() => speak(`${s.title}. ${s.text}`)} aria-label={`Listen: ${s.title}`}>
+                  <Volume2 size={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
-          <button className="btn secondary small" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>Back</button>
+          <button className="btn secondary small" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>⬅ Back</button>
           {step < story.steps.length - 1 ? (
-            <button className="btn primary small" onClick={() => setStep((s) => Math.min(story.steps.length - 1, s + 1))}>Continue</button>
+            <button className="btn primary small" onClick={() => setStep((s) => Math.min(story.steps.length - 1, s + 1))}>Next ➡</button>
           ) : (
-            <Badge tone="success">Story complete</Badge>
+            <Badge tone="success"><Sparkles size={12} /> You finished the story! 🎉</Badge>
           )}
         </div>
       </div>

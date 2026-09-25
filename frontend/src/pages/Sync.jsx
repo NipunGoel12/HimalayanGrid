@@ -4,6 +4,7 @@ import { api } from "../services/apiClient.js";
 import { getQueuedEvents, setLastSync } from "../services/offlineStore.js";
 import { Button, StatRow, PriorityBadge, SyncStatusBadge, PageHeader, SyncTimeline } from "../components/ui.jsx";
 import { CONN_STATES } from "../constants.js";
+import FieldCamera from "../components/FieldCamera.jsx";
 
 function pipelineFrom(connState, syncing, queuedLocal, pendingUploads) {
   if (connState === CONN_STATES.OFFLINE) return queuedLocal || pendingUploads ? "QUEUED" : "OFFLINE";
@@ -14,7 +15,7 @@ function pipelineFrom(connState, syncing, queuedLocal, pendingUploads) {
   return "OFFLINE";
 }
 
-export default function Sync({ student, networkOn, connState, setConnState, setNetworkOn, setHubOn }) {
+export default function Sync({ student, networkOn, connState, setConnState, setNetworkOn, setHubOn, notify }) {
   const [ranked, setRanked] = useState([]);
   const [queue, setQueue] = useState({ uploads: [], downloads: [] });
   const [gatewayLog, setGatewayLog] = useState([]);
@@ -162,6 +163,8 @@ export default function Sync({ student, networkOn, connState, setConnState, setN
           </table>
         </div>
       </div>
+
+      <FieldCamera onSaved={refreshAll} notify={notify} />
 
       <div className="section" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div className="panel">
