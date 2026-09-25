@@ -22,7 +22,7 @@ class VisionError extends Error {
 }
 
 function apiKey() {
-  const k = process.env.NVIDIA_NEMOTRON_API_KEY;
+  const k = process.env.NVIDIA_VISION_API_KEY;
   if (!k || /^your_/i.test(k)) throw new VisionError("AI labelling needs NVIDIA_NEMOTRON_API_KEY in backend/.env. Manual labelling still works.", 503);
   return k;
 }
