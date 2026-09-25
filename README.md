@@ -1,353 +1,637 @@
-# Himalayan Learning Grid
+# 🏔️ Himalayan Learning Grid
 
-Offline-first AI education platform for remote Himalayan communities.
+> **Offline-first AI education for remote Himalayan communities.**
 
-**Story:** OFFLINE AI LEARNING → EARTH/MOUNTAIN MISSION → PERSONALIZED QUIZ → LOCAL SAVE → SMART SATELLITE SYNC → CONTINUE LEARNING OFFLINE
+Himalayan Learning Grid is a full-stack, offline-first education platform designed for students in remote mountain communities where reliable internet connectivity cannot be assumed.
 
-This repo is a real, separated full-stack app:
+It combines **AI-assisted learning, interactive Himalayan exploration, gamification, offline storage, smart synchronization, real satellite data, Earth-observation imagery, multilingual learning tools, and a Local Hub architecture** into one learning experience.
 
+### The core idea
+
+```text
+LEARN OFFLINE
+      ↓
+EXPLORE
+      ↓
+PRACTICE
+      ↓
+SAVE LOCALLY
+      ↓
+SMART SYNC WHEN CONNECTIVITY RETURNS
+      ↓
+CONTINUE LEARNING
 ```
-himalayan-learning-grid/
-├── backend/    Node + Express + SQLite — the "Local Hub" API
-└── frontend/   React + Vite PWA — the student & teacher app
+
 ---
 
-## 1. Quick start
+## ✨ Features
 
-You need Node.js 18+ installed. Two terminals:
+### 🤖 Hima — AI Learning Guide
+
+Hima is a child-friendly AI learning assistant powered by **NVIDIA Nemotron** when internet connectivity is available.
+
+Students can:
+
+* Ask questions naturally
+* Ask for simpler explanations
+* Request examples
+* Ask to be quizzed
+* Learn in the context of their current topics
+* Use suggested actions such as **Explain Simply**, **Give an Example**, and **Quiz Me**
+* Fall back to the local knowledge pack when cloud AI is unavailable
+
+The NVIDIA API key remains server-side and is never exposed to the frontend.
+
+---
+
+### 🗺️ Interactive Himalayan Map
+
+Himalayan Learning Grid provides both an **offline illustrated map** and a **real-world interactive map**.
+
+#### Illustrated Map
+
+A custom map designed for offline learning with topic-based exploration across:
+
+* Mountains
+* Rivers
+* Wildlife
+* Forests
+* Weather & Science
+* History
+* Culture
+* Space & Satellites
+
+#### Real Map
+
+The real map uses Leaflet and real-world coordinates to provide:
+
+* Himalayan locations
+* Topic pins
+* Learn / Label / Photo interactions
+* Geographic grid overlays
+* Satellite imagery
+* Terrain imagery
+* Live Earth-observation layers
+* Real satellite snapshots
+
+The application can cache previously viewed map tiles for offline reuse.
+
+---
+
+### 🛰️ Learning Satellite
+
+The Learning Satellite experience connects classroom learning with real orbital data.
+
+It provides:
+
+* Live satellite positions
+* Ground tracks
+* Coverage footprints
+* Satellite pass predictions
+* Rise / maximum elevation / set times
+* Pass direction
+* Weather and link outlook
+* Earth-observation imagery
+* Himalayan earthquake data
+
+Orbital positions are calculated in the browser using **SGP4** and real TLE data.
+
+Current tracked satellites include:
+
+* ISS
+* Terra
+* Aqua
+* Suomi NPP
+* NOAA 19
+* Landsat 8/9
+* Sentinel-2A
+* Cartosat-3
+* INSAT-3DR
+
+Data sources include **CelesTrak, NASA GIBS, Open-Meteo, and USGS**.
+
+> Satellite orbital data, weather, imagery and Earth-observation data are real. The actual satellite communication/data-transfer gateway is simulated for the current prototype.
+
+---
+
+### 🎮 Gamified Learning
+
+Students learn through exploration, missions and rewards.
+
+The platform supports:
+
+* XP
+* Daily streaks
+* Badges
+* Missions
+* Topic exploration
+* Saved topics
+* Learning progress
+* Topic-specific quizzes
+
+Example missions:
+
+```text
+🏔️ Mountain Explorer
+🌊 River Detective
+🐾 Wildlife Guardian
+📜 History Explorer
+🌱 Culture Keeper
+🌦️ Climate Guardian
+🌌 Stargazer
+🛰️ Satellite Scientist
+```
+
+---
+
+### 📚 Academic Learning
+
+The platform also contains a structured academic learning system.
+
+Current curriculum content includes:
+
+* Fractions
+* Water Cycle
+* Contour Maps
+
+Students can access:
+
+* Courses
+* Lessons
+* Quizzes
+* Personalized progress
+* Weak-topic tracking
+* Learning history
+* Class progress
+
+---
+
+### 📸 Field Camera
+
+The Field Camera turns the student's surroundings into an interactive learning activity.
+
+Students can:
+
+* Capture photos using their device camera
+* Upload images
+* Place labels manually
+* Move and edit labels
+* Categorize objects
+* Listen to labels using text-to-speech
+* Export labeled diagrams as PNG
+
+Supported built-in languages include:
+
+* English
+* Hindi
+* Nepali
+* Bengali
+* Urdu
+* Tibetan / Ladakhi script
+
+When connected, NVIDIA vision models can assist with automatic image labeling.
+
+---
+
+### 📖 Story Mode
+
+Story Mode teaches concepts through short illustrated learning journeys:
+
+* **Journey of a Water Drop**
+* **Journey of a Himalayan Seed**
+* **How a Mountain Forms**
+* **How a Satellite Sees Earth**
+
+Stories include:
+
+* Animated diagrams
+* Step-by-step explanations
+* Multilingual translation
+* Browser text-to-speech
+* Offline caching after content is downloaded
+
+---
+
+## 🔄 Smart Sync
+
+Connectivity is treated as a limited resource.
+
+Instead of attempting to synchronize everything, the Smart Priority Engine ranks content according to learning relevance.
+
+The priority system considers:
+
+```text
+Weak-topic match          × 5
+Teacher request           × 4
+Unanswered question       × 4
+New curriculum            × 3
+Language match             × 3
+Mission relevance          × 2
+Large-file penalty        × -2
+```
+
+This allows the system to prioritize the educational content that matters most when connectivity becomes available.
+
+---
+
+## 📴 Offline-First Architecture
+
+Offline functionality is a core requirement of the platform.
+
+The frontend uses:
+
+* Service Worker
+* IndexedDB
+* Local caching
+* Cached lessons
+* Cached quiz attempts
+* Offline learning events
+* Synchronization queues
+* Offline application shell
+
+The application can continue functioning with no internet connection when required content has already been cached.
+
+When connectivity returns, queued learning activity can be synchronized.
+
+---
+
+# 🧠 Architecture
+
+```text
+                    HIMALAYAN LEARNING GRID
+                              │
+             ┌────────────────┴────────────────┐
+             │                                 │
+      React + Vite PWA                    Local Hub API
+             │                           Express + SQLite
+      ┌──────┴──────┐                 ┌────────┴─────────┐
+      │             │                 │                  │
+  IndexedDB    Service Worker       AI Service       Sync Engine
+      │                               │                  │
+      │                         NVIDIA Nemotron     Priority Engine
+      │
+      └────────────── Offline ──────────────────────────┘
+                              │
+                              ▼
+                    External Data Sources
+                              │
+             ┌────────────────┼────────────────┐
+             │                │                │
+         CelesTrak         NASA GIBS        Open-Meteo
+             │                │                │
+             └──────────── USGS ──────────────┘
+```
+
+The architecture is designed around a **Local Hub** model.
+
+In a real deployment, the Local Hub could run inside a school or village and communicate with the wider internet or satellite infrastructure when connectivity becomes available.
+
+---
+
+# 🛠️ Tech Stack
+
+## Frontend
+
+* React
+* Vite
+* JavaScript / JSX
+* Leaflet
+* React Leaflet
+* Lucide React
+* IndexedDB
+* Service Worker
+* PWA
+
+## Backend
+
+* Node.js
+* Express
+* SQLite
+* better-sqlite3
+
+## AI
+
+* NVIDIA Nemotron
+* NVIDIA Vision models
+* Context-aware AI tutoring
+* Local deterministic knowledge fallback
+
+## Earth & Satellite Data
+
+* CelesTrak
+* NASA GIBS
+* Open-Meteo
+* USGS
+* Wikipedia Geosearch
+
+## Deployment
+
+* Vercel — Frontend
+* Render — Backend
+
+---
+
+# 📁 Project Structure
+
+```text
+HimalayanGrid/
+│
+├── backend/
+│   ├── src/
+│   │   ├── db/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── server.js
+│   │
+│   ├── data/
+│   │   └── hlg.sqlite
+│   │
+│   ├── package.json
+│   └── .env.example
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── data/
+│   │   ├── pages/
+│   │   └── services/
+│   │
+│   ├── public/
+│   ├── package.json
+│   └── vite.config.js
+│
+└── README.md
+```
+
+---
+
+# ⚡ Getting Started
+
+## Prerequisites
+
+* Node.js 18+
+* npm
+
+## 1. Clone
 
 ```bash
-# Terminal 1 — backend (Local Hub API + SQLite)
-cd backend
-cp .env.example .env       # optional: add ANTHROPIC_API_KEY for the cloud AI Tutor
-npm install
-npm run dev                 # http://localhost:4000
+git clone https://github.com/NipunGoel12/HimalayanGrid.git
+cd HimalayanGrid
+```
 
-# Terminal 2 — frontend (student/teacher PWA)
+## 2. Start the Backend
+
+```bash
+cd backend
+npm install
+```
+
+Create your environment file:
+
+```bash
+cp .env.example .env
+```
+
+Add the required environment variables.
+
+Then start the server:
+
+```bash
+npm run dev
+```
+
+The backend runs on the configured port.
+
+For production:
+
+```bash
+npm start
+```
+
+---
+
+## 3. Start the Frontend
+
+Open another terminal:
+
+```bash
 cd frontend
 npm install
-npm run dev                 # http://localhost:5173
+npm run dev
 ```
 
-Open **http://localhost:5173**. The Vite dev server proxies `/api/*` to the backend automatically (see `frontend/vite.config.js`), so you never need to hardcode a host.
+Vite will start the frontend locally.
 
-The backend auto-creates and seeds a SQLite database at `backend/data/hlg.sqlite` on first run — nothing to configure.
+Open:
 
-### AI Tutor cloud mode
-If `ANTHROPIC_API_KEY` is unset, the AI Tutor automatically and silently runs in **Local Tutor** (deterministic offline knowledge pack) mode — this is not an error state, it's the intended offline behavior. Set the key in `backend/.env` to enable the cloud model when "Satellite / Internet" is toggled on in the UI.
+```text
+http://localhost:5173
+```
+
+During local development, Vite proxies `/api/*` requests to the backend.
 
 ---
 
-## 2. What was already present
+# 🔐 Environment Variables
 
-The backend (Express + SQLite, all routes/services) and a working frontend already existed from an earlier build. This round was a **frontend visual redesign only** — the backend, database schema, and REST API were reused as-is (one additive field was added to a response; see below).
+## Backend
 
-## 2a. Redesign summary (latest round)
+Example:
 
-Goal: replace the earlier dark "AI-dashboard" look with a light, restrained, professional EdTech UI closer to Google Classroom / Khan Academy / school-management software, while preserving every existing feature.
+```env
+NVIDIA_NEMOTRON_API_KEY=your_api_key
+NVIDIA_MODEL=your_model
+NVIDIA_BASE_URL=your_base_url
 
-**Files changed**
-- `frontend/src/styles.css` — full rewrite: light neutral surfaces, single restrained brand color, real type scale, tables, badges, skeletons, empty states (no gradients/glow/neon/glassmorphism).
-- `frontend/src/components/ui.jsx` — rebuilt component kit: `Button`, `Badge`, `ConnectionBadge`, `ProgressBar`, `EmptyState`, `SectionHead`, `StatRow`, `Skeleton`/`SkeletonLines`, `PriorityBadge`, `SyncStatusBadge`.
-- `frontend/src/constants.js` — grouped, realistic sidebar navigation (`Learning / Connectivity / Management / Account`).
-- `frontend/src/App.jsx` — new application shell: light sidebar with icons (lucide-react), header with connection/role indicators, restructured routing.
-- `frontend/src/pages/*.jsx` — every page redesigned: `Dashboard`, `Quiz` (rebuilt as a real one-question-at-a-time exam flow with a question palette, mark-for-review, and a results/review screen), `AITutor` (subdued assistant panel, no longer a dominant chatbot), `Sync.jsx` (now a professional Sync Center: stat row, priority table, upload/download tables, conflict list), `Teacher.jsx` (real `<table>` layouts), `Mission.jsx`, `Progress.jsx`.
-- **New pages**: `Courses.jsx` (catalog/browse, replaces the old `Lessons.jsx`), `MyLearning.jsx` (a proper LMS learning page: course/chapter navigation, current lesson, progress bar, previous/next, resources, quiz CTA — replaces the old `LessonDetail.jsx`), `Downloads.jsx` (offline content management), `SettingsPage.jsx` (profile, offline storage, a real "clear offline cache" action, and a link to Demo Mode).
-- `backend/src/routes/quiz.js` — **one additive change**: `POST /api/quiz/submit` now also returns a `review` array (per-question chosen/correct answers) so the redesigned results screen can show a correct/incorrect breakdown. No existing field was removed or renamed, so old consumers of this endpoint are unaffected.
+EMBEDDING_PROVIDER=nvidia
+NVIDIA_EMBEDDING_MODEL=your_embedding_model
+```
 
-**Existing functionality preserved**
-- All REST endpoints, the SQLite schema, the Smart Priority Engine, the Mock Satellite Gateway, the AI Tutor's cloud/local fallback, offline IndexedDB caching, and the sync/conflict-resolution flow are unchanged and reused by the new UI exactly as before.
-- Hackathon Demo Mode still exists (moved to a subtle secondary sidebar link + a shortcut in Settings) rather than being deleted, since it's the primary way to demo Smart Sync end-to-end.
-- The Mountain Mission feature still exists (reachable from the Dashboard "Today's mission" card and from Demo Mode) even though it isn't one of the primary sidebar sections requested.
+Optional vision configuration:
 
-**New dependency added**: `lucide-react` (small, tree-shakeable icon set) — used for sidebar/status icons so the UI doesn't rely on emoji. No other dependencies were added; there was no existing TypeScript setup in this project, so this redesign was done in the existing plain JS/JSX + Vite stack rather than introducing TypeScript or a heavier component library (e.g. shadcn/ui), per the instruction to avoid unnecessary dependencies.
+```env
+NVIDIA_VISION_MODEL=your_vision_model
+```
 
-**Verification performed**
-- `npm install` (both projects) and `npx vite build` — clean, no errors.
-- An `esbuild` bundle check across every frontend module (catches syntax/import errors without needing a browser).
-- Backend + frontend dev server run together with the Vite `/api` proxy, and every endpoint used by the new pages (`students`, `lessons`, `quiz/generate`, `quiz/submit` incl. the new `review` field, `sync/catalog`, `sync/queue`, `sync/run`, `mission`, `teacher/dashboard`, `students/:id/progress`) exercised with `curl` through the proxy to confirm the redesigned UI is wired to real data, not mocks.
+## Frontend
 
-**Known remaining issue**: PWA manifest icons (`icon-192.png` / `icon-512.png`) are still placeholders-only (referenced in `vite.config.js` but not included) — add real artwork before shipping an installable build. Everything else in this file's "Known limitations" (below) still applies.
+The frontend can optionally use external satellite imagery providers:
 
-## 2b. Redesign summary (Explorer / child-first round)
+```env
+VITE_MAPBOX_TOKEN=your_token
+```
 
-Goal: transform the platform into a gamified, child-friendly exploration experience — an interactive Himalayan map, Explore mode, learning missions with XP/badges, a child profile, story-based learning, and a kid-friendly satellite explainer — while keeping the academic/offline/sync/teacher backend from earlier rounds fully intact.
+or:
 
-**New content model & backend (additive only)**
-- `topics`, `missions`, `topic_progress`, `saved_topics` tables (`backend/src/db/schema.sql`), plus a guarded migration adding `xp` / `badges` / `streak` / `last_active_date` to `students` for pre-existing databases.
-- 20 seeded topics across Mountains, Rivers, Animals, Forests, Weather/Science, History, Culture, Space and Satellites (Everest, Kanchenjunga, Brahmaputra, Ganga, Himalayan glaciers, snow leopard, red panda, Himalayan monal, Great Himalayan National Park, Valley of Flowers, Sikkim culture, Ladakh geography, satellite communication, and more), and 8 missions (Mountain Explorer, River Detective, Wildlife Guardian, History Explorer, Culture Keeper, Climate Guardian, Stargazer, Satellite Scientist) — each with a badge and XP reward.
-- `backend/src/services/gamificationService.js` — XP, daily streaks, and mission/badge evaluation, deliberately kept separate from the existing weak-topic/quiz engine so grade-level academic personalization is untouched.
-- New routes: `backend/src/routes/topics.js` (`GET /api/topics`, `GET /api/topics/:id`, `POST /api/topics/:id/explore`, `POST /api/topics/:id/quiz`, `POST /api/topics/:id/save`) and `backend/src/routes/missions.js` (`GET /api/missions`). One additive endpoint on the existing students route: `GET /api/students/:id/gamification`.
+```env
+VITE_MAPTILER_KEY=your_key
+```
 
-**New frontend experience**
-- `Home.jsx` — "Welcome back, Explorer" with a visual **My Learning Journey** path (Mountains → Forests → Rivers → Culture → History → Science → Satellites), a **Today's Adventure** card, and **Recommended for you**.
-- `HimalayanMap.jsx` — an interactive map with six teaching modes (Geography / History / Environment / Culture / Science / Satellite), rendered as an original offline-first SVG illustration with clickable location pins — deliberately **not** built on a tile-server map library, so the map works with zero network access rather than depending on external map tiles (see "Map technology" note below).
-- `Explore.jsx` — free-browse topic cards by category.
-- `TopicDetail.jsx` — the "Did you know?" panel → mini quiz → XP/badge celebration flow (the hackathon "wow moment").
-- `Missions.jsx` / `Profile.jsx` — mission progress, badges, journey, saved topics, downloads, and academic progress in one tabbed profile.
-- `AskAGuide.jsx` — a child-friendly reframing of the AI Tutor with suggested questions and "Explain simply / Give an example / Quiz me" quick actions (superseded the previous round's `AITutor.jsx`).
-- `StoryMode.jsx` — four short illustrated stories ("Journey of a Water Drop," "Journey of a Himalayan Seed," "How a Mountain Forms," "How a Satellite Sees Earth").
-- `LearningSatellite.jsx` — the child-facing satellite explainer (satellite → mountain region → local hub → student, plus a 5-step "how it works"), with a link through to the existing technical Sync Center for anyone who wants the real mechanics.
-- `Onboarding.jsx` — an illustrated-avatar-only onboarding screen (no password/photo collection) that stands in for login/signup, since the backend has no user-authentication system to extend. This was a deliberate scope decision: building a fake password-based auth system for a single-demo-student hackathon backend would add risk without adding real functionality; a safe, honest, child-appropriate profile picker was implemented instead.
+The application also includes satellite, terrain and Earth-observation layers that do not require these optional keys.
 
-**Existing functionality preserved**
-- The academic curriculum (Fractions / Water Cycle / Contour Map lessons and quizzes, weak-topic personalization) is unchanged and still reachable via a "Classwork" nav group (`Courses`, `My Learning`, `Class Progress`).
-- The professional Sync Center, Teacher Dashboard, Mountain Mission, and Demo Mode from earlier rounds are all unchanged and still reachable (Sync Center via Settings or the Learning Satellite page; Demo Mode via a sidebar shortcut).
-- All offline caching, the sync queue, the Smart Priority Engine, and the Mock Satellite Gateway are untouched.
-
-**Bug found and fixed during verification**: `POST /api/topics/:id/explore` checked whether a topic was "already explored" *after* writing the upsert that had just set `explored = 1`, so first-time exploration XP was silently never awarded (the response claimed success regardless). Fixed to check prior state before writing, and re-verified: first explore now awards 10 XP, repeat exploration correctly awards 0, and completing all 3 Mountain Explorer topics correctly awards the "Mountain Explorer" badge and updates the mission's `complete` flag.
-
-**New dependency**: none beyond `lucide-react` (already added in the previous round).
-
-**Map technology note**: per the brief's own guidance to prefer offline capability over an external mapping dependency, the map is a custom, original SVG illustration with data-driven location pins (topic `mapX`/`mapY` fields from the content model) rather than Leaflet/MapLibre + tile servers — this sandbox has no reliable access to public tile CDNs, and a "works with the network off" map is core to the product's identity. The architecture keeps the same `topics` table used everywhere else, so swapping in a real tile-based map (e.g., MapLibre with an offline vector tile pack) later only touches `HimalayanMap.jsx`.
-
-**Known remaining gaps**: only one of the several "quiz modes" from the brief exists in full (the per-topic mini quiz); map/picture/true-false/match-the-pair quiz variants were not built. No real photo/audio assets are used (icons are emoji, per the "no photo uploads" child-safety guidance, but this also means the "photographs" requirement from the visual-learning section isn't literally met). Onboarding stands in for login/signup rather than real authentication, as noted above.
-
-**Verification performed**
-- Careful code review of all pre-existing new files (this content was already present in the project when I started this round) before trusting or extending it.
-- `npx esbuild` bundle check across every frontend module (compiles clean).
-- `npx vite build` production build (clean).
-- Backend + frontend run together with the Vite proxy; every route (old and new) exercised via `curl`, including the full topic-explore → topic-quiz → mission-complete → badge-award chain.
-- Found and fixed the explore-XP-award ordering bug described above, then re-verified the fix.
-
-## 2c. Real Map + Labeling Activity + Satellite imagery (merged round)
-
-Features from `Himalayan_Grid-merged` were merged into this repo **without touching the landing page, local onboarding/profile flow, Hima (NVIDIA Nemotron) tutor, or the rest of the app**:
-
-- `components/RealMap.jsx` — Leaflet map of the Himalayas with topic pins (Learn / Label / Photo).
-- `components/LabelingActivity.jsx` + `data/labelingDiagrams.jsx` — tap-to-label diagram activity (offline once loaded).
-- `components/MapGridOverlay.jsx` — lat/long graticule that adapts to zoom.
-- `components/SatelliteCapture.jsx` — **Capture** (PNG of the current map view) and per-pin **Photo**.
-- `data/topicCoordinates.js` — real-world lat/lng per topic.
-- `pages/HimalayanMap.jsx` — new **Illustrated / Real map** toggle; the illustrated offline map is unchanged.
-
-### Realistic satellite upgrade (on top of the merge)
-
-- **Real imagery, three basemaps:** *Satellite* (Esri World Imagery + place-name labels), *Live* (NASA GIBS daily true-colour VIIRS mosaic — yesterday's date, updated automatically) and *Terrain* (OpenTopoMap/SRTM). All three work with **no API key**.
-- **Photo is now a real snapshot:** the pin's 📷 Photo stitches real satellite tiles around the topic's coordinates. If the network/tile server is unavailable it falls back to the original generated offline illustration and says so in the modal.
-- **Offline reuse:** map tiles are cached (`CacheFirst`, 600 tiles / 30 days) by the PWA service worker, so areas a student has already viewed still show offline.
-- **Optional premium layers:** set `VITE_MAPBOX_TOKEN` or `VITE_MAPTILER_KEY` in `frontend/.env` to switch *Satellite* to Mapbox / MapTiler. See `frontend/src/services/satelliteConfig.js`.
-- **CSS:** one additive block was appended to `styles.css` (nothing above it was edited). It also defines base rules for `category-pill`, `map-frame`, `map-pin*`, `toast`, `modal-backdrop`, which existing JSX already used but had no CSS.
-- **New dependencies (frontend):** `leaflet`, `react-leaflet`, `html2canvas` (dynamically imported on Capture).
-
-## 2d. Live orbital tracking (Learning Satellite page) — real data, no keys
-
-Added to `pages/LearningSatellite.jsx` via `components/LiveSatelliteSection.jsx`. Everything in this section is computed from real public data — nothing is randomised or hard-coded:
-
-| Feature | How it works | Source |
-|---|---|---|
-| **Live satellite positions** (ISS, Terra, Aqua, Suomi NPP, NOAA 19, Landsat 8/9, Sentinel-2A, Cartosat-3, INSAT-3DR) | Local Hub downloads orbital elements (TLEs); the browser propagates them every second with the SGP4 model (`satellite.js`) | CelesTrak via `GET /api/satellite/tles` |
-| **Ground track + coverage footprint** of the selected satellite | Computed from the same orbit | — |
-| **Pass predictions** over a Himalayan hub (24 h, above 10° elevation) with rise/max/set, direction and a **sky-path plot** | Look-angle maths from the hub's lat/lon/elevation | Same TLEs |
-| **Weather + link outlook** for each pass, and a "Best window" badge | Hourly cloud/rain/snow forecast matched to the pass time; rain/snow fade guideline | Open-Meteo |
-| **Earth-observation layers**: today's true-colour, snow cover, land-surface temperature, night lights | NASA GIBS tiles, dated (yesterday / 2 days ago) | NASA GIBS |
-| **Earthquakes** (M2.5+, 7 days, Himalayan region) | Plotted on the map | USGS |
-| **Offline** | TLEs are cached on the hub disk (`backend/data/tle-cache.json`) **and** on the device (IndexedDB); weather/quakes are cached on-device. Stale data is labelled with its age. | — |
-
-Notes: the *data transfer* on that page (Open Satellite Window, sync timeline) is still the simulated `MockSatelliteAdapter` — a real uplink needs real hardware. Pass timing, weather and imagery above are real. Verified: SGP4 output matches the reference Python `sgp4` implementation to 0.1 km for the same element set.
-
-## 2e. Field Camera (Sync page) — capture & label photos in any language
-
-`components/FieldCamera.jsx`, shown on the **Sync** page.
-
-- **Capture:** live camera (rear camera by default, flip button) or upload a photo. Needs `https://` or `localhost` for camera access.
-- **Label:** pick a category (person, tree, plant, flower, mountain, snow, river, sky, cloud, house, road, bridge, field, animal, vehicle, rock), tap the photo to drop a numbered pin, drag pins to move them, tap a pin to rename/recategorise/delete/listen (text-to-speech).
-- **Languages:** English, Hindi, Nepali, Bengali, Urdu and Tibetan/Ladakhi script are built in and work **offline** (`data/fieldLabels.js`; Tibetan covers common words only — have a local speaker verify). Type **any other language** (e.g. Japanese, Garhwali) and the AI translates the labels (needs internet).
-- **AI auto-label (online):** `POST /api/vision/label` sends a small copy of the photo to an NVIDIA vision model (`backend/src/services/visionService.js`) and returns things it can see, with approximate positions and names in the chosen language. Positions are approximate — students can drag or delete pins, which also teaches them to check AI output. Nothing is stored by the hub.
-- **Output:** *Labeled diagram (PNG)* export with numbered pins and labels; photos are saved on the device (IndexedDB) with a thumbnail gallery.
-- **Sync:** *Save* queues a `field-photo-labeled` event (label text, categories, counts — **not the image**) into the existing offline sync queue.
-
-Keys: uses the same `NVIDIA_NEMOTRON_API_KEY` as Hima. Optional `NVIDIA_VISION_MODEL` forces one model; by default the hub tries `nvidia/nemotron-nano-12b-v2-vl`, then `meta/llama-3.2-90b-vision-instruct`, then `meta/llama-3.2-11b-vision-instruct`. Without a key, manual labelling and built-in languages still work. If a vision model's reply gets cut off (hits the reply-length limit) before finishing its JSON, the backend repairs it by keeping only the complete items and dropping the cut-off one, rather than failing the whole request; check the backend terminal for `[vision] ... repaired a truncated reply` or `could not be read` (with a snippet of the raw reply) if labelling keeps failing.
-
-## 2f. AI sub-labelling in Field Camera
-
-`backend/src/services/visionService.js` now also asks the vision model for each main item's clearly-visible **parts** (e.g. a person → eyes, nose, ears, mouth, hair, hand; a mountain → peak, snow line, ridge, slope; a house → roof, door, window, wall; a tree → trunk, branches, leaves, roots), only for categories where that makes sense, and only parts it can actually see (never invented). The frontend (`components/FieldCamera.jsx`) shows these as smaller pins connected to their parent with a dashed line, with a "Show sub-parts" toggle, quick-add suggestion chips for adding parts by hand, and independent edit/delete per part.
-
-## 2g. Real photos of nearby famous places (Map + Satellite pages)
-
-`services/placePhotos.js` + `components/PlacePhotoGallery.jsx` use Wikipedia's public geosearch API (no key) to find real, notable places near a coordinate — peaks, glaciers, monasteries, towns, national parks — with a real photo and a short factual extract for each. Cached on-device (30-day TTL) so a place already seen works offline. Wired into: the Topic Detail page (below "Did you know?"), the Real Map's pin popup, and the Live Satellite section's hub panel.
-
-## 2h. Story Mode: diagrams + any-language translation
-
-`data/storyDiagrams.jsx` adds a simple animated SVG diagram for each of the 4 stories (water cycle, seed → tree, plate-collision mountain formation, satellite → ground station → hub → student). A language picker (`services/storyTranslate.js` + `POST /api/vision/translate-story`, same NVIDIA key) translates the whole story — title and every step — into any of the 6 built-in languages (more can be requested the same way the Field Camera does); translations are cached on-device so a story already read in a language works offline afterwards. Each revealed step also has a 🔊 listen button (browser text-to-speech).
-
-## 3. What was implemented (original build, round 1)
-**Backend (`backend/`)**
-- SQLite schema + auto-seed (`src/db/schema.sql`, `src/db/index.js`)
-- REST API across students, lessons, quiz, AI tutor, sync, teacher, mission (`src/routes/*.js`)
-- Smart Priority Engine (`src/services/priorityEngine.js`)
-- SatelliteAdapter interface + MockSatelliteAdapter + RealSatelliteAdapter boundary (`src/services/satelliteAdapter.js`)
-- AI Tutor context retriever + cloud/local model adapter with graceful fallback (`src/services/aiService.js`)
-- Sync engine: upload/download queues, retries, deterministic conflict resolution (`src/services/syncEngine.js`)
-
-**Frontend (`frontend/`)**
-- React + Vite PWA (service worker via `vite-plugin-pwa`, `manifest.webmanifest`)
-- IndexedDB-backed offline store for the student profile, cached lessons, quiz attempts, and a queue of learning events recorded with zero connectivity (`src/services/offlineStore.js`)
-- API client with offline fallback to local cache on every read (`src/services/apiClient.js`)
-- Full student experience (as of round 1): Dashboard, Courses, My Learning, AI Tutor, Quizzes, Mountain Mission, Progress, Downloads, Sync Center, Teacher Dashboard, Settings, Hackathon Demo Mode (`src/pages/*.jsx`). **Superseded/extended by the Explorer round above** — see §2b for the current page list and nav structure.
+> **Never expose the NVIDIA API key through a `VITE_*` environment variable.**
 
 ---
 
-## 4. Architecture
+# 🌐 Deployment
 
-```
-Browser (React PWA)                    Local Hub (Express + SQLite)
-+--------------------------+           +-------------------------------+
-| Service Worker           |  /api/*   | REST routes                   |
-| IndexedDB (offline store)|---------->|  students - lessons - quiz    |
-| apiClient.js             |<----------|  ai - sync - teacher - mission|
-+--------------------------+   fetch   |                                |
-                                        | Services                      |
-                                        |  priorityEngine                |
-                                        |  satelliteAdapter (Mock/Real)  |
-                                        |  aiService (cloud/local)       |
-                                        |  syncEngine                    |
-                                        +---------------+----------------+
-                                                        |
-                                              SQLite (hlg.sqlite)
-```
+The production architecture separates the frontend and backend:
 
-The frontend never talks to the satellite/cloud AI directly — it always goes through the Local Hub API, which is the same pattern a real deployment would use (a physical local-hub server in the village, syncing to a satellite ground station periodically).
-
-## 5. Offline strategy
-
-- **Service worker** precaches the app shell; API GETs are cached network-first with a 3s timeout, so screens keep rendering from cache when the Local Hub is unreachable.
-- **IndexedDB** (`offlineStore.js`) persists the student profile, lesson content, quiz attempts, and a `learning_events` queue whenever a request fails outright (device has no connection to the Local Hub at all, e.g. student is truly standalone).
-- **Local Hub SQLite** is the source of truth once a device *can* reach the hub over Local Wi-Fi, even with the satellite/internet link down — this is the `LOCAL_HUB` connection state.
-- Nothing is ever faked: lesson completion, quiz submission, and mission completion always write a real row before the UI shows success.
-
-## 6. AI architecture
-
-```
-Student Question
-  -> Context Retriever (grade, language, weak topics, mission state)
-  -> Model Adapter
-      |- Cloud: Anthropic API (claude-sonnet-4-6), used when "online" is true and ANTHROPIC_API_KEY is set
-      \- Local: deterministic keyword-matched knowledge pack (always available)
-  -> Response Validation (non-empty, else fall back to Local)
-  -> Answer + learning_events row (ai-question-answered / ai-question-unanswered)
+```text
+                  Vercel
+                    │
+                    │ HTTPS
+                    ▼
+          HimalayanGrid Frontend
+                    │
+                    │ /api/*
+                    ▼
+                  Render
+                    │
+             Express Backend
+                    │
+        ┌───────────┼───────────┐
+        │           │           │
+      SQLite      NVIDIA     Satellite
+                   AI          Data
 ```
 
-Unanswered questions are logged to `unanswered_questions` and feed the Smart Priority Engine's `unanswered-question match` factor on the next sync.
+For the Vite frontend, configure:
 
-## 7. Smart Sync algorithm
-
-```
-priority = weakTopicMatch*5 + teacherRequest*4 + unansweredQuestionMatch*4
-         + newCurriculum*3 + languageMatch*3 + missionRelevance*2
-         - largeFilePenalty*2   (2 points per 50MB over the 50MB threshold)
+```env
+VITE_API_URL=https://your-backend-url
 ```
 
-Ranked in `GET /api/sync/catalog`, and re-applied on every `POST /api/sync/run`. Packages scoring <=0 are labeled `SKIPPED` and never downloaded — this is how the 300MB "Cultural Documentary" video is deliberately never synced in the demo.
+The frontend then sends API requests to the deployed backend.
 
-## 8. Satellite mock architecture
+---
 
-`SatelliteAdapter` (interface) -> `connect / disconnect / getStatus / uploadPackage / downloadPackage / getAvailablePackages / getSatelliteData`.
+# 🛰️ Real vs Simulated
 
-- `MockSatelliteAdapter` — the MVP implementation. Real, timed async behavior (`setTimeout`-based), with a deterministic failure hook used by the "Simulate a package validation failure" toggle in the Satellite Sync screen.
-- `RealSatelliteAdapter` — a documented boundary only. It throws on `connect()` by design, so it can never be mistaken for a live satellite link. A future real integration swaps this class in behind the same interface; no route or UI code changes.
+Himalayan Learning Grid deliberately distinguishes between real data and simulated infrastructure.
 
-The UI is labeled **"SIMULATED SATELLITE GATEWAY — HACKATHON MVP"** wherever the sync panel appears.
+### Real
 
-## 9. Database / data model
+* Satellite orbital elements
+* SGP4 orbital propagation
+* Satellite positions
+* Satellite pass calculations
+* Weather forecasts
+* Earth-observation imagery
+* Earthquake data
+* Geographic coordinates
+* AI responses when connected
+* Local database operations
 
-SQLite (`backend/src/db/schema.sql`): `students`, `lessons`, `quiz_questions`, `quiz_attempts`, `learning_events`, `content_catalog`, `sync_downloads`, `teacher_requests`, `unanswered_questions`, `sync_history`, `conflicts`.
+### Simulated
 
-`learning_events` and `quiz_attempts` carry `synced` / `sync_status` columns so the sync engine can track upload state per row without a separate outbox table.
+* Physical satellite communication
+* Satellite uplink/downlink hardware
+* Village-to-satellite transmission gateway
 
-## 10. API endpoints
+The `SatelliteAdapter` abstraction allows the simulated gateway to eventually be replaced by a real communication implementation.
 
-```
-GET    /api/health
+---
 
-GET    /api/students/:id
-GET    /api/students/:id/progress
-PUT    /api/students/:id/profile
+# 🧪 Demo Flow
 
-GET    /api/lessons
-GET    /api/lessons/:id
+### Learning
 
-POST   /api/quiz/generate     { studentId, topic? }
-POST   /api/quiz/submit       { studentId, topic, answers[], questionIds[] }
-GET    /api/quiz/history      ?studentId=
-
-POST   /api/ai/ask            { studentId, question, online, missionDone }
-POST   /api/ai/explain        { studentId, topic }
-POST   /api/ai/generate-quiz  { topic }
-POST   /api/ai/recommend      { studentId }
-
-GET    /api/sync/status
-GET    /api/sync/catalog      ?studentId=      (Smart Priority Engine ranking)
-POST   /api/sync/run          { studentId, simulateFailure }
-GET    /api/sync/queue
-POST   /api/sync/downloads/:id/retry
-GET    /api/sync/history
-GET    /api/sync/gateway-log
-GET    /api/sync/conflicts
-POST   /api/sync/conflicts/:id/resolve
-POST   /api/sync/events       { studentId, type, payload }
-
-GET    /api/teacher/dashboard
-POST   /api/teacher/requests  { topic | packageId, note? }
-
-GET    /api/mission
-POST   /api/mission/complete  { studentId, answers }
-
-GET    /api/topics            ?category=&studentId=   (content model shared by Map/Explore/Missions)
-GET    /api/topics/:id        ?studentId=
-POST   /api/topics/:id/explore  { studentId }          (+10 XP first time, updates streak)
-POST   /api/topics/:id/quiz     { studentId, answers[] } (mini quiz, +XP and mission/badge check on pass)
-POST   /api/topics/:id/save     { studentId }          (toggle saved-for-later)
-
-GET    /api/missions          ?studentId=              (progress + badge status per mission)
-GET    /api/students/:id/gamification                   (xp, streak, badges, exploration %)
+```text
+Onboarding
+    ↓
+Home
+    ↓
+Today's Adventure
+    ↓
+Explore Himalayan Topic
+    ↓
+Learn
+    ↓
+Mini Quiz
+    ↓
+XP / Badge
+    ↓
+Progress
 ```
 
-## 11. Demo instructions
+### Offline Connectivity
 
-1. Start both servers (`backend` on :4000, `frontend` on :5173) as in Quick Start.
-2. Open the app — you'll land on **Onboarding** the first time (pick an explorer avatar, no password/photo needed), then the **Home** screen.
-3. The "wow moment" flow: **Home** → click a topic on **Today's Adventure** or the **Himalayan Map** → read the "Did you know?" panel → **Take mini quiz** → on a passing score, watch the XP counter and (once a mission's topics are all complete) the badge-unlock celebration fire in `TopicDetail.jsx`.
-4. For the original satellite-sync story, use **Demo Mode** (sidebar shortcut, or Settings → Developer & technical tools) → **Play full demo** — this still runs the full offline lesson → mission → quiz → sync flow from round 1 against the real backend.
+```text
+Learn Offline
+      ↓
+Complete Mission
+      ↓
+Queue Learning Events
+      ↓
+Connectivity Returns
+      ↓
+Smart Priority Engine
+      ↓
+Rank Required Content
+      ↓
+Sync
+      ↓
+Continue Learning
+```
 
-## 12. How to simulate network-off mode
+---
 
-Top bar has two independent toggles, mirroring the plan's `ONLINE -> LOCAL HUB -> OFFLINE -> SYNCING -> SYNC ERROR` states:
-- **Local Wi-Fi Hub** — on by default; talking to the Express API over the local network.
-- **Satellite / Internet** — off by default; required for `POST /api/sync/run` and the cloud AI Tutor.
-- **Force Network OFF** button — turns both off at once for a clean offline demo moment.
+# 🔮 Roadmap
 
-## 13. How to demonstrate Smart Sync to judges
+* Real satellite communication hardware integration
+* School and teacher authentication
+* Multi-user accounts
+* More curriculum content
+* More regional languages
+* Offline vector map packs
+* Expanded quiz formats
+* Richer field-learning content
+* Real Local Hub deployments
+* Production-grade persistent database infrastructure
 
-Open **Satellite Sync**. The ranked list shows every catalog package with its live score and the exact reasons it scored that way (weak-topic match, teacher request, etc.), and the 300MB video visibly lands on `SKIPPED`. Toggle **"Simulate a package validation failure"** and re-run the sync to show a `SYNC ERROR` state and its retry flow. Submitting a quiz attempt right before syncing also surfaces the deterministic conflict-resolution card (local score kept, nothing silently overwritten).
+---
 
-## 14. Known limitations
+# ⚠️ Current Limitations
 
-- Single hardcoded demo student (`std-001`) and a static teacher roster — no multi-user accounts; Onboarding is an avatar picker, not real authentication (see §2b).
-- `RealSatelliteAdapter` is a boundary stub only; there is no real satellite integration.
-- PWA icons in `frontend/vite.config.js` (`icon-192.png`, `icon-512.png`) are referenced but not included — add real artwork before shipping an installable build.
-- Conflict resolution demo is a one-shot deterministic scenario, not a general-purpose merge algorithm.
-- Map/picture/true-false/match-the-pair quiz variants from the brief were not built — only the per-topic mini quiz exists.
-- The default *Illustrated* map is an original SVG; the *Real map* view (§2c) needs network access for tiles it hasn't cached yet.
-- No automated test suite — validated manually via the endpoints in this README and the demo script.
+Himalayan Learning Grid is currently a prototype / hackathon implementation.
 
-## 15. Future real-satellite integration path
+Current limitations include:
 
-1. Implement a new class extending `SatelliteAdapter` in `backend/src/services/satelliteAdapter.js` (e.g. `IridiumAdapter`, `StarlinkAdapter`) that talks to the real provider's SDK/API.
-2. Swap the adapter instance created in `backend/src/services/syncEngine.js` — everything else (priority engine, routes, frontend) is unchanged because it only depends on the `SatelliteAdapter` interface.
-3. Replace simulated latency/failure with real link telemetry, and extend `getStatus()` to report real signal/pass-window data to the UI's connection badge.
+* Demo-oriented student profile flow
+* No production authentication system
+* Satellite data-transfer gateway is simulated
+* Some advanced quiz modes remain to be implemented
+* Real map imagery requires network access until cached
+* PWA install artwork requires final production assets
+* SQLite requires persistent storage planning for production deployment
 
-## 16. API keys — where to configure them
+---
 
-| Where | Variable | Required? | Used for |
-|---|---|---|---|
-| `backend/.env` | `NVIDIA_NEMOTRON_API_KEY` | **Yes, for Hima (AI Tutor / Ask a Guide)** — get it at https://build.nvidia.com | Chat completions to NVIDIA Nemotron (`backend/src/services/aiService.js`). Without it the tutor cannot answer. |
-| `backend/.env` | `NVIDIA_NEMOTRON_MODEL` | No | Override the default model id. |
-| `backend/.env` | `NVIDIA_VISION_MODEL` | No | Force one vision model for Field Camera AI labelling (same NVIDIA key). |
-| — | — | No | Story Mode translation and Field Camera part-labelling reuse the same `NVIDIA_NEMOTRON_API_KEY` and text/vision models above — no extra key. |
-| `backend/.env` | `ANTHROPIC_API_KEY` | No (legacy) | Only referenced in a startup log line in `server.js`; the tutor no longer calls Anthropic. |
-| `backend/.env` | `PORT`, `DB_PATH`, `MOCK_SATELLITE_LATENCY_MS` | No | Server port, SQLite path, simulated sync delay. |
-| `frontend/.env` | `VITE_MAPBOX_TOKEN` | No | Mapbox satellite-streets basemap (public `pk.` token, URL-restricted). |
-| `frontend/.env` | `VITE_MAPTILER_KEY` | No | MapTiler satellite basemap. |
+# 🎯 Design Principles
 
-The default Satellite, Live (NASA GIBS) and Terrain map layers, and the whole live-tracking section (CelesTrak, Open-Meteo, USGS, NASA GIBS), need **no key**. Restart `npm run dev` after editing any `.env` file.
+### Offline First
+
+Connectivity should enhance learning, not determine whether learning is possible.
+
+### Real Data Where It Matters
+
+Satellite positions, weather, imagery and Earth-observation data come from real public datasets.
+
+### Child First
+
+The interface emphasizes exploration, stories, missions and understandable explanations.
+
+### Local by Default
+
+Learning activity and cached content should remain useful even when the cloud disappears.
+
+### Honest Simulation
+
+Infrastructure that is not physically deployed is explicitly represented as simulated.
+
+<p align="center">
+
+**🏔️ Learn beyond the network.**
+
+</p>
