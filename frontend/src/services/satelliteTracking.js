@@ -13,7 +13,8 @@ const R_EARTH = 6371; // km (mean radius, for footprint maths)
 /** Fetch elements from the Local Hub; fall back to the last copy stored on-device. */
 export async function loadElements() {
   try {
-    const res = await fetch("/api/satellite/tles");
+    const res = await fetch(
+  `${import.meta.env.VITE_API_URL || ""}/api/satellite/tles`);
     if (!res.ok) throw new Error(`hub ${res.status}`);
     const data = await res.json();
     await set(TLE_KEY, data);
