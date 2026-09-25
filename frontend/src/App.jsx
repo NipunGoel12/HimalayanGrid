@@ -839,6 +839,7 @@ export default function App() {
                 <HimalayanMap
                   student={student}
                   openTopic={openTopic}
+                  notify={notify}
                 />
               )}
 
@@ -964,6 +965,7 @@ export default function App() {
                     setNetworkOn
                   }
                   setHubOn={setHubOn}
+                  notify={notify}
                 />
               )}
 

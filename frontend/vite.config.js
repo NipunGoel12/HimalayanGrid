@@ -30,6 +30,18 @@ export default defineConfig({
         // to the last cached response, so lessons/progress still render offline.
         runtimeCaching: [
           {
+            // Satellite / terrain map tiles: once a tile has been viewed it stays
+            // available offline (cache-first), capped so storage stays bounded.
+            urlPattern: ({ url }) =>
+              /(arcgisonline\.com|earthdata\.nasa\.gov|opentopomap\.org|api\.maptiler\.com|api\.mapbox\.com)$/.test(url.hostname),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "hlg-map-tiles",
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             urlPattern: ({ url, request }) => url.pathname.startsWith("/api/") && request.method === "GET",
             handler: "NetworkFirst",
             options: {

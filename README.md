@@ -110,6 +110,67 @@ Goal: transform the platform into a gamified, child-friendly exploration experie
 - Backend + frontend run together with the Vite proxy; every route (old and new) exercised via `curl`, including the full topic-explore → topic-quiz → mission-complete → badge-award chain.
 - Found and fixed the explore-XP-award ordering bug described above, then re-verified the fix.
 
+## 2c. Real Map + Labeling Activity + Satellite imagery (merged round)
+
+Features from `Himalayan_Grid-merged` were merged into this repo **without touching the landing page, local onboarding/profile flow, Hima (NVIDIA Nemotron) tutor, or the rest of the app**:
+
+- `components/RealMap.jsx` — Leaflet map of the Himalayas with topic pins (Learn / Label / Photo).
+- `components/LabelingActivity.jsx` + `data/labelingDiagrams.jsx` — tap-to-label diagram activity (offline once loaded).
+- `components/MapGridOverlay.jsx` — lat/long graticule that adapts to zoom.
+- `components/SatelliteCapture.jsx` — **Capture** (PNG of the current map view) and per-pin **Photo**.
+- `data/topicCoordinates.js` — real-world lat/lng per topic.
+- `pages/HimalayanMap.jsx` — new **Illustrated / Real map** toggle; the illustrated offline map is unchanged.
+
+### Realistic satellite upgrade (on top of the merge)
+
+- **Real imagery, three basemaps:** *Satellite* (Esri World Imagery + place-name labels), *Live* (NASA GIBS daily true-colour VIIRS mosaic — yesterday's date, updated automatically) and *Terrain* (OpenTopoMap/SRTM). All three work with **no API key**.
+- **Photo is now a real snapshot:** the pin's 📷 Photo stitches real satellite tiles around the topic's coordinates. If the network/tile server is unavailable it falls back to the original generated offline illustration and says so in the modal.
+- **Offline reuse:** map tiles are cached (`CacheFirst`, 600 tiles / 30 days) by the PWA service worker, so areas a student has already viewed still show offline.
+- **Optional premium layers:** set `VITE_MAPBOX_TOKEN` or `VITE_MAPTILER_KEY` in `frontend/.env` to switch *Satellite* to Mapbox / MapTiler. See `frontend/src/services/satelliteConfig.js`.
+- **CSS:** one additive block was appended to `styles.css` (nothing above it was edited). It also defines base rules for `category-pill`, `map-frame`, `map-pin*`, `toast`, `modal-backdrop`, which existing JSX already used but had no CSS.
+- **New dependencies (frontend):** `leaflet`, `react-leaflet`, `html2canvas` (dynamically imported on Capture).
+
+## 2d. Live orbital tracking (Learning Satellite page) — real data, no keys
+
+Added to `pages/LearningSatellite.jsx` via `components/LiveSatelliteSection.jsx`. Everything in this section is computed from real public data — nothing is randomised or hard-coded:
+
+| Feature | How it works | Source |
+|---|---|---|
+| **Live satellite positions** (ISS, Terra, Aqua, Suomi NPP, NOAA 19, Landsat 8/9, Sentinel-2A, Cartosat-3, INSAT-3DR) | Local Hub downloads orbital elements (TLEs); the browser propagates them every second with the SGP4 model (`satellite.js`) | CelesTrak via `GET /api/satellite/tles` |
+| **Ground track + coverage footprint** of the selected satellite | Computed from the same orbit | — |
+| **Pass predictions** over a Himalayan hub (24 h, above 10° elevation) with rise/max/set, direction and a **sky-path plot** | Look-angle maths from the hub's lat/lon/elevation | Same TLEs |
+| **Weather + link outlook** for each pass, and a "Best window" badge | Hourly cloud/rain/snow forecast matched to the pass time; rain/snow fade guideline | Open-Meteo |
+| **Earth-observation layers**: today's true-colour, snow cover, land-surface temperature, night lights | NASA GIBS tiles, dated (yesterday / 2 days ago) | NASA GIBS |
+| **Earthquakes** (M2.5+, 7 days, Himalayan region) | Plotted on the map | USGS |
+| **Offline** | TLEs are cached on the hub disk (`backend/data/tle-cache.json`) **and** on the device (IndexedDB); weather/quakes are cached on-device. Stale data is labelled with its age. | — |
+
+Notes: the *data transfer* on that page (Open Satellite Window, sync timeline) is still the simulated `MockSatelliteAdapter` — a real uplink needs real hardware. Pass timing, weather and imagery above are real. Verified: SGP4 output matches the reference Python `sgp4` implementation to 0.1 km for the same element set.
+
+## 2e. Field Camera (Sync page) — capture & label photos in any language
+
+`components/FieldCamera.jsx`, shown on the **Sync** page.
+
+- **Capture:** live camera (rear camera by default, flip button) or upload a photo. Needs `https://` or `localhost` for camera access.
+- **Label:** pick a category (person, tree, plant, flower, mountain, snow, river, sky, cloud, house, road, bridge, field, animal, vehicle, rock), tap the photo to drop a numbered pin, drag pins to move them, tap a pin to rename/recategorise/delete/listen (text-to-speech).
+- **Languages:** English, Hindi, Nepali, Bengali, Urdu and Tibetan/Ladakhi script are built in and work **offline** (`data/fieldLabels.js`; Tibetan covers common words only — have a local speaker verify). Type **any other language** (e.g. Japanese, Garhwali) and the AI translates the labels (needs internet).
+- **AI auto-label (online):** `POST /api/vision/label` sends a small copy of the photo to an NVIDIA vision model (`backend/src/services/visionService.js`) and returns things it can see, with approximate positions and names in the chosen language. Positions are approximate — students can drag or delete pins, which also teaches them to check AI output. Nothing is stored by the hub.
+- **Output:** *Labeled diagram (PNG)* export with numbered pins and labels; photos are saved on the device (IndexedDB) with a thumbnail gallery.
+- **Sync:** *Save* queues a `field-photo-labeled` event (label text, categories, counts — **not the image**) into the existing offline sync queue.
+
+Keys: uses the same `NVIDIA_NEMOTRON_API_KEY` as Hima. Optional `NVIDIA_VISION_MODEL` forces one model; by default the hub tries `nvidia/nemotron-nano-12b-v2-vl`, then `meta/llama-3.2-90b-vision-instruct`, then `meta/llama-3.2-11b-vision-instruct`. Without a key, manual labelling and built-in languages still work. If a vision model's reply gets cut off (hits the reply-length limit) before finishing its JSON, the backend repairs it by keeping only the complete items and dropping the cut-off one, rather than failing the whole request; check the backend terminal for `[vision] ... repaired a truncated reply` or `could not be read` (with a snippet of the raw reply) if labelling keeps failing.
+
+## 2f. AI sub-labelling in Field Camera
+
+`backend/src/services/visionService.js` now also asks the vision model for each main item's clearly-visible **parts** (e.g. a person → eyes, nose, ears, mouth, hair, hand; a mountain → peak, snow line, ridge, slope; a house → roof, door, window, wall; a tree → trunk, branches, leaves, roots), only for categories where that makes sense, and only parts it can actually see (never invented). The frontend (`components/FieldCamera.jsx`) shows these as smaller pins connected to their parent with a dashed line, with a "Show sub-parts" toggle, quick-add suggestion chips for adding parts by hand, and independent edit/delete per part.
+
+## 2g. Real photos of nearby famous places (Map + Satellite pages)
+
+`services/placePhotos.js` + `components/PlacePhotoGallery.jsx` use Wikipedia's public geosearch API (no key) to find real, notable places near a coordinate — peaks, glaciers, monasteries, towns, national parks — with a real photo and a short factual extract for each. Cached on-device (30-day TTL) so a place already seen works offline. Wired into: the Topic Detail page (below "Did you know?"), the Real Map's pin popup, and the Live Satellite section's hub panel.
+
+## 2h. Story Mode: diagrams + any-language translation
+
+`data/storyDiagrams.jsx` adds a simple animated SVG diagram for each of the 4 stories (water cycle, seed → tree, plate-collision mountain formation, satellite → ground station → hub → student). A language picker (`services/storyTranslate.js` + `POST /api/vision/translate-story`, same NVIDIA key) translates the whole story — title and every step — into any of the 6 built-in languages (more can be requested the same way the Field Camera does); translations are cached on-device so a story already read in a language works offline afterwards. Each revealed step also has a 🔊 listen button (browser text-to-speech).
+
 ## 3. What was implemented (original build, round 1)
 **Backend (`backend/`)**
 - SQLite schema + auto-seed (`src/db/schema.sql`, `src/db/index.js`)
@@ -267,7 +328,7 @@ Open **Satellite Sync**. The ranked list shows every catalog package with its li
 - PWA icons in `frontend/vite.config.js` (`icon-192.png`, `icon-512.png`) are referenced but not included — add real artwork before shipping an installable build.
 - Conflict resolution demo is a one-shot deterministic scenario, not a general-purpose merge algorithm.
 - Map/picture/true-false/match-the-pair quiz variants from the brief were not built — only the per-topic mini quiz exists.
-- The interactive map is an original SVG illustration, not a real geospatial/tile-based map (see §2b for why).
+- The default *Illustrated* map is an original SVG; the *Real map* view (§2c) needs network access for tiles it hasn't cached yet.
 - No automated test suite — validated manually via the endpoints in this README and the demo script.
 
 ## 15. Future real-satellite integration path
@@ -275,3 +336,18 @@ Open **Satellite Sync**. The ranked list shows every catalog package with its li
 1. Implement a new class extending `SatelliteAdapter` in `backend/src/services/satelliteAdapter.js` (e.g. `IridiumAdapter`, `StarlinkAdapter`) that talks to the real provider's SDK/API.
 2. Swap the adapter instance created in `backend/src/services/syncEngine.js` — everything else (priority engine, routes, frontend) is unchanged because it only depends on the `SatelliteAdapter` interface.
 3. Replace simulated latency/failure with real link telemetry, and extend `getStatus()` to report real signal/pass-window data to the UI's connection badge.
+
+## 16. API keys — where to configure them
+
+| Where | Variable | Required? | Used for |
+|---|---|---|---|
+| `backend/.env` | `NVIDIA_NEMOTRON_API_KEY` | **Yes, for Hima (AI Tutor / Ask a Guide)** — get it at https://build.nvidia.com | Chat completions to NVIDIA Nemotron (`backend/src/services/aiService.js`). Without it the tutor cannot answer. |
+| `backend/.env` | `NVIDIA_NEMOTRON_MODEL` | No | Override the default model id. |
+| `backend/.env` | `NVIDIA_VISION_MODEL` | No | Force one vision model for Field Camera AI labelling (same NVIDIA key). |
+| — | — | No | Story Mode translation and Field Camera part-labelling reuse the same `NVIDIA_NEMOTRON_API_KEY` and text/vision models above — no extra key. |
+| `backend/.env` | `ANTHROPIC_API_KEY` | No (legacy) | Only referenced in a startup log line in `server.js`; the tutor no longer calls Anthropic. |
+| `backend/.env` | `PORT`, `DB_PATH`, `MOCK_SATELLITE_LATENCY_MS` | No | Server port, SQLite path, simulated sync delay. |
+| `frontend/.env` | `VITE_MAPBOX_TOKEN` | No | Mapbox satellite-streets basemap (public `pk.` token, URL-restricted). |
+| `frontend/.env` | `VITE_MAPTILER_KEY` | No | MapTiler satellite basemap. |
+
+The default Satellite, Live (NASA GIBS) and Terrain map layers, and the whole live-tracking section (CelesTrak, Open-Meteo, USGS, NASA GIBS), need **no key**. Restart `npm run dev` after editing any `.env` file.
