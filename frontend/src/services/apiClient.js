@@ -4,7 +4,7 @@
  */
 import * as store from "./offlineStore.js";
 
-const BASE = "/api";
+const BASE = `${import.meta.env.VITE_API_URL || ""}/api`;
 
 async function request(path, options = {}) {
   const { timeoutMs = 12000, ...rest } = options;
